@@ -14,11 +14,6 @@
  * limitations under the License.
  */
 
-package com.google.zxing;
-
-import com.google.zxing.common.BitArray;
-import com.google.zxing.common.BitMatrix;
-
 /**
  * This class hierarchy provides a set of methods to convert luminance data to 1 bit data.
  * It allows the algorithm to vary polymorphically, for example allowing a very expensive
@@ -27,15 +22,13 @@ import com.google.zxing.common.BitMatrix;
  *
  * @author dswitkin@google.com (Daniel Switkin)
  */
-public abstract class Binarizer {
+export default class Binarizer {
 
-  private final LuminanceSource source;
-
-  protected Binarizer(LuminanceSource source) {
+  constructor(source) {
     this.source = source;
   }
 
-  public final LuminanceSource getLuminanceSource() {
+  getLuminanceSource() {
     return source;
   }
 
@@ -53,7 +46,7 @@ public abstract class Binarizer {
    * @return The array of bits for this row (true means black).
    * @throws NotFoundException if row can't be binarized
    */
-  public abstract BitArray getBlackRow(int y, BitArray row) throws NotFoundException;
+  //public abstract BitArray getBlackRow(int y, BitArray row) throws NotFoundException;
 
   /**
    * Converts a 2D array of luminance data to 1 bit data. As above, assume this method is expensive
@@ -64,7 +57,7 @@ public abstract class Binarizer {
    * @return The 2D array of bits for the image (true means black).
    * @throws NotFoundException if image can't be binarized to make a matrix
    */
-  public abstract BitMatrix getBlackMatrix() throws NotFoundException;
+  //public abstract BitMatrix getBlackMatrix() throws NotFoundException;
 
   /**
    * Creates a new object with the same type as this Binarizer implementation, but with pristine
@@ -74,14 +67,14 @@ public abstract class Binarizer {
    * @param source The LuminanceSource this Binarizer will operate on.
    * @return A new concrete Binarizer implementation object.
    */
-  public abstract Binarizer createBinarizer(LuminanceSource source);
+  //public abstract Binarizer createBinarizer(LuminanceSource source);
 
-  public final int getWidth() {
-    return source.getWidth();
+  getWidth() {
+    return this.source.getWidth();
   }
 
-  public final int getHeight() {
-    return source.getHeight();
+  getHeight() {
+    return this.source.getHeight();
   }
 
 }

@@ -14,11 +14,15 @@
  * limitations under the License.
  */
 
-package com.google.zxing.common;
 
-import com.google.zxing.Binarizer;
-import com.google.zxing.LuminanceSource;
-import com.google.zxing.NotFoundException;
+import Binarizer from '../Binarizer';
+import BitArray from 'BitArray';
+import BitMatrix from 'BitMatrix';
+
+const LUMINANCE_BITS = 5;
+const LUMINANCE_SHIFT = 8 - LUMINANCE_BITS;
+const LUMINANCE_BUCKETS = 1 << LUMINANCE_BITS;
+const EMPTY = [];
 
 /**
  * This Binarizer implementation uses the old ZXing global histogram approach. It is suitable
@@ -31,48 +35,39 @@ import com.google.zxing.NotFoundException;
  * @author dswitkin@google.com (Daniel Switkin)
  * @author Sean Owen
  */
-public class GlobalHistogramBinarizer extends Binarizer {
+export default class GlobalHistogramBinarizer extends Binarizer {
 
-  private static final int LUMINANCE_BITS = 5;
-  private static final int LUMINANCE_SHIFT = 8 - LUMINANCE_BITS;
-  private static final int LUMINANCE_BUCKETS = 1 << LUMINANCE_BITS;
-  private static final byte[] EMPTY = new byte[0];
-
-  private byte[] luminances;
-  private final int[] buckets;
-
-  public GlobalHistogramBinarizer(LuminanceSource source) {
+  constructor(source) {
     super(source);
-    luminances = EMPTY;
-    buckets = new int[LUMINANCE_BUCKETS];
+    this.luminances = EMPTY;
+    this.buckets = [];
   }
 
   // Applies simple sharpening to the row data to improve performance of the 1D Readers.
-  @Override
-  public BitArray getBlackRow(int y, BitArray row) throws NotFoundException {
-    LuminanceSource source = getLuminanceSource();
-    int width = source.getWidth();
+  getBlackRow(y, row) {
+    const source = getLuminanceSource();
+    const width = source.getWidth();
     if (row == null || row.getSize() < width) {
       row = new BitArray(width);
     } else {
       row.clear();
     }
 
-    initArrays(width);
-    byte[] localLuminances = source.getRow(y, luminances);
-    int[] localBuckets = buckets;
-    for (int x = 0; x < width; x++) {
-      int pixel = localLuminances[x] & 0xff;
+    this.initArrays(width);
+    const localLuminances = source.getRow(y, this.luminances);
+    const localBuckets = this.buckets;
+    for (let x = 0; x < width; x++) {
+      const pixel = localLuminances[x] & 0xff;
       localBuckets[pixel >> LUMINANCE_SHIFT]++;
     }
-    int blackPoint = estimateBlackPoint(localBuckets);
+    const blackPoint = GlobalHistogramBinarizer.estimateBlackPoint(localBuckets);
 
-    int left = localLuminances[0] & 0xff;
-    int center = localLuminances[1] & 0xff;
-    for (int x = 1; x < width - 1; x++) {
-      int right = localLuminances[x + 1] & 0xff;
+    let left = localLuminances[0] & 0xff;
+    let center = localLuminances[1] & 0xff;
+    for (let x = 1; x < width - 1; x++) {
+      const right = localLuminances[x + 1] & 0xff;
       // A simple -1 4 -1 box filter with a weight of 2.
-      int luminance = ((center * 4) - left - right) / 2;
+      const luminance = ((center * 4) - left - right) / 2;
       if (luminance < blackPoint) {
         row.set(x);
       }
@@ -83,36 +78,35 @@ public class GlobalHistogramBinarizer extends Binarizer {
   }
 
   // Does not sharpen the data, as this call is intended to only be used by 2D Readers.
-  @Override
-  public BitMatrix getBlackMatrix() throws NotFoundException {
-    LuminanceSource source = getLuminanceSource();
-    int width = source.getWidth();
-    int height = source.getHeight();
-    BitMatrix matrix = new BitMatrix(width, height);
+  getBlackMatrix() {
+    const source = getLuminanceSource();
+    const width = source.getWidth();
+    const height = source.getHeight();
+    const matrix = new BitMatrix(width, height);
 
     // Quickly calculates the histogram by sampling four rows from the image. This proved to be
     // more robust on the blackbox tests than sampling a diagonal as we used to do.
-    initArrays(width);
-    int[] localBuckets = buckets;
-    for (int y = 1; y < 5; y++) {
-      int row = height * y / 5;
-      byte[] localLuminances = source.getRow(row, luminances);
-      int right = (width * 4) / 5;
-      for (int x = width / 5; x < right; x++) {
-        int pixel = localLuminances[x] & 0xff;
+    this.initArrays(width);
+    const localBuckets = this.buckets;
+    for (let y = 1; y < 5; y++) {
+      const row = height * y / 5;
+      const localLuminances = source.getRow(row, this.luminances);
+      const right = (width * 4) / 5;
+      for (let x = width / 5; x < right; x++) {
+        const pixel = localLuminances[x] & 0xff;
         localBuckets[pixel >> LUMINANCE_SHIFT]++;
       }
     }
-    int blackPoint = estimateBlackPoint(localBuckets);
+    const blackPoint = GlobalHistogramBinarizer.estimateBlackPoint(localBuckets);
 
     // We delay reading the entire image luminance until the black point estimation succeeds.
     // Although we end up reading four rows twice, it is consistent with our motto of
     // "fail quickly" which is necessary for continuous scanning.
-    byte[] localLuminances = source.getMatrix();
-    for (int y = 0; y < height; y++) {
-      int offset = y * width;
-      for (int x = 0; x< width; x++) {
-        int pixel = localLuminances[offset + x] & 0xff;
+    const localLuminances = source.getMatrix();
+    for (let y = 0; y < height; y++) {
+      const offset = y * width;
+      for (let x = 0; x< width; x++) {
+        const pixel = localLuminances[offset + x] & 0xff;
         if (pixel < blackPoint) {
           matrix.set(x, y);
         }
@@ -122,27 +116,26 @@ public class GlobalHistogramBinarizer extends Binarizer {
     return matrix;
   }
 
-  @Override
-  public Binarizer createBinarizer(LuminanceSource source) {
+  createBinarizer(source) {
     return new GlobalHistogramBinarizer(source);
   }
 
-  private void initArrays(int luminanceSize) {
-    if (luminances.length < luminanceSize) {
-      luminances = new byte[luminanceSize];
+  initArrays(luminanceSize) {
+    if (this.luminances.length < luminanceSize) {
+      this.luminances = []; // FIXME useless?
     }
-    for (int x = 0; x < LUMINANCE_BUCKETS; x++) {
-      buckets[x] = 0;
+    for (let x = 0; x < LUMINANCE_BUCKETS; x++) {
+      this.buckets[x] = 0;
     }
   }
 
-  private static int estimateBlackPoint(int[] buckets) throws NotFoundException {
+  static estimateBlackPoint(buckets) {
     // Find the tallest peak in the histogram.
-    int numBuckets = buckets.length;
-    int maxBucketCount = 0;
-    int firstPeak = 0;
-    int firstPeakSize = 0;
-    for (int x = 0; x < numBuckets; x++) {
+    const numBuckets = buckets.length;
+    let maxBucketCount = 0;
+    let firstPeak = 0;
+    let firstPeakSize = 0;
+    for (let x = 0; x < numBuckets; x++) {
       if (buckets[x] > firstPeakSize) {
         firstPeak = x;
         firstPeakSize = buckets[x];
@@ -153,12 +146,12 @@ public class GlobalHistogramBinarizer extends Binarizer {
     }
 
     // Find the second-tallest peak which is somewhat far from the tallest peak.
-    int secondPeak = 0;
-    int secondPeakScore = 0;
-    for (int x = 0; x < numBuckets; x++) {
-      int distanceToBiggest = x - firstPeak;
+    let secondPeak = 0;
+    let secondPeakScore = 0;
+    for (let x = 0; x < numBuckets; x++) {
+      const distanceToBiggest = x - firstPeak;
       // Encourage more distant second peaks by multiplying by square of distance.
-      int score = buckets[x] * distanceToBiggest * distanceToBiggest;
+      const score = buckets[x] * distanceToBiggest * distanceToBiggest;
       if (score > secondPeakScore) {
         secondPeak = x;
         secondPeakScore = score;
@@ -167,7 +160,7 @@ public class GlobalHistogramBinarizer extends Binarizer {
 
     // Make sure firstPeak corresponds to the black peak.
     if (firstPeak > secondPeak) {
-      int temp = firstPeak;
+      const temp = firstPeak;
       firstPeak = secondPeak;
       secondPeak = temp;
     }
@@ -175,15 +168,15 @@ public class GlobalHistogramBinarizer extends Binarizer {
     // If there is too little contrast in the image to pick a meaningful black point, throw rather
     // than waste time trying to decode the image, and risk false positives.
     if (secondPeak - firstPeak <= numBuckets / 16) {
-      throw NotFoundException.getNotFoundInstance();
+      throw NotFoundException.getNotFoundInstance(); // FIXME
     }
 
     // Find a valley between them that is low and closer to the white peak.
-    int bestValley = secondPeak - 1;
-    int bestValleyScore = -1;
-    for (int x = secondPeak - 1; x > firstPeak; x--) {
-      int fromFirst = x - firstPeak;
-      int score = fromFirst * fromFirst * (secondPeak - x) * (maxBucketCount - buckets[x]);
+    let bestValley = secondPeak - 1;
+    let bestValleyScore = -1;
+    for (let x = secondPeak - 1; x > firstPeak; x--) {
+      const fromFirst = x - firstPeak;
+      const score = fromFirst * fromFirst * (secondPeak - x) * (maxBucketCount - buckets[x]);
       if (score > bestValleyScore) {
         bestValley = x;
         bestValleyScore = score;
