@@ -14,9 +14,7 @@
  * limitations under the License.
  */
 
-package com.google.zxing.common;
-
-import java.util.Arrays;
+import BitArray from './BitArray';
 
 /**
  * <p>Represents a 2D matrix of bits. In function arguments below, and throughout the common
@@ -33,64 +31,54 @@ import java.util.Arrays;
  * @author Sean Owen
  * @author dswitkin@google.com (Daniel Switkin)
  */
-public final class BitMatrix implements Cloneable {
 
-  private final int width;
-  private final int height;
-  private final int rowSize;
-  private final int[] bits;
+export default class BitMatrix {
 
-  // A helper to construct a square matrix.
-  public BitMatrix(int dimension) {
-    this(dimension, dimension);
-  }
+  constructor(width, height = width, rowSize = (width + 31) / 32, bits = []) {
 
-  public BitMatrix(int width, int height) {
-    if (width < 1 || height < 1) {
-      throw new IllegalArgumentException("Both dimensions must be greater than 0");
+    if (!width || width < 1) {
+      throw new IllegalArgumentException("The width must be greater than 0");
     }
-    this.width = width;
-    this.height = height;
-    this.rowSize = (width + 31) / 32;
-    bits = new int[rowSize * height];
-  }
 
-  private BitMatrix(int width, int height, int rowSize, int[] bits) {
+    if (!height || height < 1) {
+      throw new IllegalArgumentException("The height must be greater than 0");
+    }
+
     this.width = width;
     this.height = height;
     this.rowSize = rowSize;
     this.bits = bits;
   }
 
-  public static BitMatrix parse(String stringRepresentation, String setString, String unsetString) {
-    if (stringRepresentation == null) {
+  static parse(stringRepresentation, setString, unsetString) {
+    if (stringRepresentation === null) {
       throw new IllegalArgumentException();
     }
 
-    boolean[] bits = new boolean[stringRepresentation.length()];
-    int bitsPos = 0;
-    int rowStartPos = 0;
-    int rowLength = -1;
-    int nRows = 0;
-    int pos = 0;
+    const bits = new boolean[stringRepresentation.length()];
+    let bitsPos = 0;
+    let rowStartPos = 0;
+    let rowLength = -1;
+    let nRows = 0;
+    let pos = 0;
     while (pos < stringRepresentation.length()) {
-      if (stringRepresentation.charAt(pos) == '\n' ||
-          stringRepresentation.charAt(pos) == '\r') {
+      if (stringRepresentation.charAt(pos) === '\n' ||
+          stringRepresentation.charAt(pos) === '\r') {
         if (bitsPos > rowStartPos) {
-          if (rowLength == -1) {
+          if (rowLength === -1) {
             rowLength = bitsPos - rowStartPos;
-          } else if (bitsPos - rowStartPos != rowLength) {
+          } else if (bitsPos - rowStartPos !== rowLength) {
             throw new IllegalArgumentException("row lengths do not match");
           }
           rowStartPos = bitsPos;
           nRows++;
         }
         pos++;
-      }  else if (stringRepresentation.substring(pos, pos + setString.length()).equals(setString)) {
+      }  else if (stringRepresentation.substring(pos, pos + setString.length()) === setString) {
         pos += setString.length();
         bits[bitsPos] = true;
         bitsPos++;
-      } else if (stringRepresentation.substring(pos, pos + unsetString.length()).equals(unsetString)) {
+      } else if (stringRepresentation.substring(pos, pos + unsetString.length()) === unsetString) {
         pos += unsetString.length();
         bits[bitsPos] = false;
         bitsPos++;
@@ -102,16 +90,16 @@ public final class BitMatrix implements Cloneable {
 
     // no EOL at end?
     if (bitsPos > rowStartPos) {
-      if(rowLength == -1) {
+      if(rowLength === -1) {
         rowLength = bitsPos - rowStartPos;
-      } else if (bitsPos - rowStartPos != rowLength) {
+      } else if (bitsPos - rowStartPos !== rowLength) {
         throw new IllegalArgumentException("row lengths do not match");
       }
       nRows++;
     }
 
-    BitMatrix matrix = new BitMatrix(rowLength, nRows);
-    for (int i = 0; i < bitsPos; i++) {
+    const matrix = new BitMatrix(rowLength, nRows);
+    for (let i = 0; i < bitsPos; i++) {
       if (bits[i]) {
         matrix.set(i % rowLength, i / rowLength);
       }
@@ -124,11 +112,11 @@ public final class BitMatrix implements Cloneable {
    *
    * @param x The horizontal component (i.e. which column)
    * @param y The vertical component (i.e. which row)
-   * @return value of given bit in matrix
+   * @return Boolean value of given bit in matrix
    */
-  public boolean get(int x, int y) {
-    int offset = y * rowSize + (x / 32);
-    return ((bits[offset] >>> (x & 0x1f)) & 1) != 0;
+  get(x, y) {
+    const offset = y * this.rowSize + (x / 32);
+    return ((this.bits[offset] >>> (x & 0x1f)) & 1) !== 0;
   }
 
   /**
@@ -137,14 +125,14 @@ public final class BitMatrix implements Cloneable {
    * @param x The horizontal component (i.e. which column)
    * @param y The vertical component (i.e. which row)
    */
-  public void set(int x, int y) {
-    int offset = y * rowSize + (x / 32);
-    bits[offset] |= 1 << (x & 0x1f);
+  set(x, y) {
+    const offset = y * this.rowSize + (x / 32);
+    this.bits[offset] |= 1 << (x & 0x1f);
   }
 
-  public void unset(int x, int y) {
-    int offset = y * rowSize + (x / 32);
-    bits[offset] &= ~(1 << (x & 0x1f));
+  unset(x, y) {
+    const offset = y * this.rowSize + (x / 32);
+    this.bits[offset] &= ~(1 << (x & 0x1f));
   }
 
   /**
@@ -153,9 +141,9 @@ public final class BitMatrix implements Cloneable {
    * @param x The horizontal component (i.e. which column)
    * @param y The vertical component (i.e. which row)
    */
-  public void flip(int x, int y) {
-    int offset = y * rowSize + (x / 32);
-    bits[offset] ^= 1 << (x & 0x1f);
+  flip(x, y) {
+    const offset = y * this.rowSize + (x / 32);
+    this.bits[offset] ^= 1 << (x & 0x1f);
   }
 
   /**
@@ -164,17 +152,18 @@ public final class BitMatrix implements Cloneable {
    *
    * @param mask XOR mask
    */
-  public void xor(BitMatrix mask) {
-    if (width != mask.getWidth() || height != mask.getHeight()
-        || rowSize != mask.getRowSize()) {
+  xor(mask) {
+    if (this.width != mask.getWidth()
+        || this.height != mask.getHeight()
+        || this.rowSize != mask.getRowSize()) {
       throw new IllegalArgumentException("input matrix dimensions do not match");
     }
-    BitArray rowArray = new BitArray(width / 32 + 1);
-    for (int y = 0; y < height; y++) {
-      int offset = y * rowSize;
-      int[] row = mask.getRow(y, rowArray).getBitArray();
-      for (int x = 0; x < rowSize; x++) {
-        bits[offset + x] ^= row[x];
+    const rowArray = new BitArray(this.width / 32 + 1);
+    for (let y = 0; y < this.height; y++) {
+      const offset = y * this.rowSize;
+      const row = mask.getRow(y, rowArray).getBitArray();
+      for (let x = 0; x < this.rowSize; x++) {
+        this.bits[offset + x] ^= row[x];
       }
     }
   }
@@ -182,11 +171,8 @@ public final class BitMatrix implements Cloneable {
   /**
    * Clears all bits (sets to false).
    */
-  public void clear() {
-    int max = bits.length;
-    for (int i = 0; i < max; i++) {
-      bits[i] = 0;
-    }
+  clear() {
+    this.bits = [];
   }
 
   /**
@@ -197,22 +183,22 @@ public final class BitMatrix implements Cloneable {
    * @param width The width of the region
    * @param height The height of the region
    */
-  public void setRegion(int left, int top, int width, int height) {
+  setRegion(left, top, width, height) {
     if (top < 0 || left < 0) {
       throw new IllegalArgumentException("Left and top must be nonnegative");
     }
     if (height < 1 || width < 1) {
       throw new IllegalArgumentException("Height and width must be at least 1");
     }
-    int right = left + width;
-    int bottom = top + height;
+    const right = left + width;
+    const bottom = top + height;
     if (bottom > this.height || right > this.width) {
       throw new IllegalArgumentException("The region must fit inside the matrix");
     }
-    for (int y = top; y < bottom; y++) {
-      int offset = y * rowSize;
-      for (int x = left; x < right; x++) {
-        bits[offset + (x / 32)] |= 1 << (x & 0x1f);
+    for (let y = top; y < bottom; y++) {
+      const offset = y * this.rowSize;
+      for (let x = left; x < right; x++) {
+        this.bits[offset + (x / 32)] |= 1 << (x & 0x1f);
       }
     }
   }
@@ -225,15 +211,15 @@ public final class BitMatrix implements Cloneable {
    * @return The resulting BitArray - this reference should always be used even when passing
    *         your own row
    */
-  public BitArray getRow(int y, BitArray row) {
-    if (row == null || row.getSize() < width) {
+  getRow(y, row) {
+    if (!row || row.getSize() < width) {
       row = new BitArray(width);
     } else {
       row.clear();
     }
-    int offset = y * rowSize;
-    for (int x = 0; x < rowSize; x++) {
-      row.setBulk(x * 32, bits[offset + x]);
+    const offset = y * this.rowSize;
+    for (let x = 0; x < this.rowSize; x++) {
+      row.setBulk(x * 32, this.bits[offset + x]);
     }
     return row;
   }
@@ -242,25 +228,27 @@ public final class BitMatrix implements Cloneable {
    * @param y row to set
    * @param row {@link BitArray} to copy from
    */
-  public void setRow(int y, BitArray row) {
-    System.arraycopy(row.getBitArray(), 0, bits, y * rowSize, rowSize);
+  setRow(y, row) {
+    for (let i = 0; i < this.rowSize; i++) {
+      this.bits[y * this.rowSize + i] = row[i];
+    }
   }
 
   /**
    * Modifies this {@code BitMatrix} to represent the same but rotated 180 degrees
    */
-  public void rotate180() {
-    int width = getWidth();
-    int height = getHeight();
-    BitArray topRow = new BitArray(width);
-    BitArray bottomRow = new BitArray(width);
-    for (int i = 0; i < (height+1) / 2; i++) {
-      topRow = getRow(i, topRow);
-      bottomRow = getRow(height - 1 - i, bottomRow);
+  rotate180() {
+    const width = this.getWidth();
+    const height = this.getHeight();
+    let topRow = new BitArray(width);
+    let bottomRow = new BitArray(width);
+    for (let i = 0; i < (height+1) / 2; i++) {
+      topRow = this.getRow(i, topRow);
+      bottomRow = this.getRow(height - 1 - i, bottomRow);
       topRow.reverse();
       bottomRow.reverse();
-      setRow(i, bottomRow);
-      setRow(height - 1 - i, topRow);
+      this.setRow(i, bottomRow);
+      this.setRow(height - 1 - i, topRow);
     }
   }
 
@@ -269,15 +257,15 @@ public final class BitMatrix implements Cloneable {
    *
    * @return {@code left,top,width,height} enclosing rectangle of all 1 bits, or null if it is all white
    */
-  public int[] getEnclosingRectangle() {
-    int left = width;
-    int top = height;
-    int right = -1;
-    int bottom = -1;
+  getEnclosingRectangle() {
+    let left = this.width;
+    let top = this.height;
+    let right = -1;
+    let bottom = -1;
 
-    for (int y = 0; y < height; y++) {
-      for (int x32 = 0; x32 < rowSize; x32++) {
-        int theBits = bits[y * rowSize + x32];
+    for (let y = 0; y < this.height; y++) {
+      for (let x32 = 0; x32 < this.rowSize; x32++) {
+        const theBits = this.bits[y * this.rowSize + x32];
         if (theBits != 0) {
           if (y < top) {
             top = y;
@@ -286,7 +274,7 @@ public final class BitMatrix implements Cloneable {
             bottom = y;
           }
           if (x32 * 32 < left) {
-            int bit = 0;
+            let bit = 0;
             while ((theBits << (31 - bit)) == 0) {
               bit++;
             }
@@ -295,7 +283,7 @@ public final class BitMatrix implements Cloneable {
             }
           }
           if (x32 * 32 + 31 > right) {
-            int bit = 31;
+            let bit = 31;
             while ((theBits >>> bit) == 0) {
               bit--;
             }
@@ -307,14 +295,14 @@ public final class BitMatrix implements Cloneable {
       }
     }
 
-    int width = right - left;
-    int height = bottom - top;
+    const width = right - left;
+    const height = bottom - top;
 
     if (width < 0 || height < 0) {
       return null;
     }
 
-    return new int[] {left, top, width, height};
+    return [left, top, width, height];
   }
 
   /**
@@ -322,105 +310,88 @@ public final class BitMatrix implements Cloneable {
    *
    * @return {@code x,y} coordinate of top-left-most 1 bit, or null if it is all white
    */
-  public int[] getTopLeftOnBit() {
-    int bitsOffset = 0;
-    while (bitsOffset < bits.length && bits[bitsOffset] == 0) {
+  getTopLeftOnBit() {
+    let bitsOffset = 0;
+    while (bitsOffset < this.bits.length && this.bits[bitsOffset] === 0) {
       bitsOffset++;
     }
-    if (bitsOffset == bits.length) {
+    if (bitsOffset === this.bits.length) {
       return null;
     }
-    int y = bitsOffset / rowSize;
-    int x = (bitsOffset % rowSize) * 32;
+    const y = bitsOffset / this.rowSize;
+    let x = (bitsOffset % this.rowSize) * 32;
 
-    int theBits = bits[bitsOffset];
-    int bit = 0;
-    while ((theBits << (31-bit)) == 0) {
+    const theBits = this.bits[bitsOffset];
+    let bit = 0;
+    while ((theBits << (31-bit)) === 0) {
       bit++;
     }
     x += bit;
-    return new int[] {x, y};
+    return [x, y];
   }
 
-  public int[] getBottomRightOnBit() {
-    int bitsOffset = bits.length - 1;
-    while (bitsOffset >= 0 && bits[bitsOffset] == 0) {
+  getBottomRightOnBit() {
+    let bitsOffset = this.bits.length - 1;
+    while (bitsOffset >= 0 && this.bits[bitsOffset] === 0) {
       bitsOffset--;
     }
     if (bitsOffset < 0) {
       return null;
     }
 
-    int y = bitsOffset / rowSize;
-    int x = (bitsOffset % rowSize) * 32;
+    const y = bitsOffset / this.rowSize;
+    let x = (bitsOffset % this.rowSize) * 32;
 
-    int theBits = bits[bitsOffset];
-    int bit = 31;
-    while ((theBits >>> bit) == 0) {
+    const theBits = this.bits[bitsOffset];
+    let bit = 31;
+    while ((theBits >>> bit) === 0) {
       bit--;
     }
     x += bit;
 
-    return new int[] {x, y};
+    return [x, y];
   }
 
   /**
    * @return The width of the matrix
    */
-  public int getWidth() {
-    return width;
+  getWidth() {
+    return this.width;
   }
 
   /**
    * @return The height of the matrix
    */
-  public int getHeight() {
-    return height;
+  getHeight() {
+    return this.height;
   }
 
   /**
    * @return The row size of the matrix
    */
-  public int getRowSize() {
-    return rowSize;
+  getRowSize() {
+    return this.rowSize;
   }
 
-  @Override
-  public boolean equals(Object o) {
+  equals(o) {
     if (!(o instanceof BitMatrix)) {
       return false;
     }
-    BitMatrix other = (BitMatrix) o;
-    return width == other.width && height == other.height && rowSize == other.rowSize &&
-    Arrays.equals(bits, other.bits);
+    return this.width === o.width
+           && this.height === o.height
+           && this.rowSize === o.rowSize
+           && Arrays.equals(bits, o.bits); // FIXME
   }
 
-  @Override
-  public int hashCode() {
-    int hash = width;
-    hash = 31 * hash + width;
-    hash = 31 * hash + height;
-    hash = 31 * hash + rowSize;
-     hash = 31 * hash + Arrays.hashCode(bits);
+  hashCode() { // FIXME useful?
+    let hash = this.width;
+    hash = 31 * hash + this.width;
+    hash = 31 * hash + this.height;
+    hash = 31 * hash + this.rowSize;
+    hash = 31 * hash + Arrays.hashCode(bits);
     return hash;
   }
 
-  /**
-   * @return string representation using "X" for set and " " for unset bits
-   */
-  @Override
-  public String toString() {
-    return toString("X ", "  ");
-  }
-
-  /**
-   * @param setString representation of a set bit
-   * @param unsetString representation of an unset bit
-   * @return string representation of entire matrix utilizing given strings
-   */
-  public String toString(String setString, String unsetString) {
-    return toString(setString, unsetString, "\n");
-  }
 
   /**
    * @param setString representation of a set bit
@@ -429,21 +400,20 @@ public final class BitMatrix implements Cloneable {
    * @return string representation of entire matrix utilizing given strings and line separator
    * @deprecated call {@link #toString(String,String)} only, which uses \n line separator always
    */
-  @Deprecated
-  public String toString(String setString, String unsetString, String lineSeparator) {
-    StringBuilder result = new StringBuilder(height * (width + 1));
-    for (int y = 0; y < height; y++) {
-      for (int x = 0; x < width; x++) {
-        result.append(get(x, y) ? setString : unsetString);
+  toString(setString = 'X ', unsetString = '  ', lineSeparator = '\n') {
+
+    const result = [];
+    for (let y = 0; y < this.height; y++) {
+      for (let x = 0; x < this.width; x++) {
+        result.push(this.get(x, y) ? setString : unsetString);
       }
-      result.append(lineSeparator);
+      result.push(lineSeparator);
     }
-    return result.toString();
+    return result.join('');
   }
 
-  @Override
-  public BitMatrix clone() {
-    return new BitMatrix(width, height, rowSize, bits.clone());
+  clone() {
+    return new BitMatrix(this.width, this.height, this.rowSize, this.bits.slice(0));
   }
 
 }

@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.google.zxing;
+import ReaderException from './ReaderException';
 
 /**
  * Thrown when a barcode was not found in the image. It might have been
@@ -22,19 +22,9 @@ package com.google.zxing;
  *
  * @author Sean Owen
  */
-public final class NotFoundException extends ReaderException {
+export default class NotFoundException extends ReaderException {
 
-  private static final NotFoundException INSTANCE = new NotFoundException();
-  static {
-    INSTANCE.setStackTrace(NO_TRACE); // since it's meaningless
+  constructor(message) {
+    super(message)
   }
-
-  private NotFoundException() {
-    // do nothing
-  }
-
-  public static NotFoundException getNotFoundInstance() {
-    return INSTANCE;
-  }
-
 }

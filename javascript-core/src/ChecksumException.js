@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.google.zxing;
+import ReaderException from './ReaderException';
 
 /**
  * Thrown when a barcode was successfully detected and decoded, but
@@ -22,26 +22,9 @@ package com.google.zxing;
  *
  * @author Sean Owen
  */
-public final class ChecksumException extends ReaderException {
+export default class ChecksumException extends ReaderException {
 
-  private static final ChecksumException INSTANCE = new ChecksumException();
-  static {
-    INSTANCE.setStackTrace(NO_TRACE); // since it's meaningless
-  }
-
-  private ChecksumException() {
-    // do nothing
-  }
-
-  private ChecksumException(Throwable cause) {
-    super(cause);
-  }
-
-  public static ChecksumException getChecksumInstance() {
-    return isStackTrace ? new ChecksumException() : INSTANCE;
-  }
-
-  public static ChecksumException getChecksumInstance(Throwable cause) {
-    return isStackTrace ? new ChecksumException(cause) : INSTANCE;
+  constructor(message) {
+    super(message);
   }
 }

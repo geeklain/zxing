@@ -16,8 +16,8 @@
 
 
 import Binarizer from '../Binarizer';
-import BitArray from 'BitArray';
-import BitMatrix from 'BitMatrix';
+import BitArray from './BitArray';
+import BitMatrix from './BitMatrix';
 
 const LUMINANCE_BITS = 5;
 const LUMINANCE_SHIFT = 8 - LUMINANCE_BITS;

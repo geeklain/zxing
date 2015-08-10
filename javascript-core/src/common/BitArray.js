@@ -14,58 +14,32 @@
  * limitations under the License.
  */
 
-package com.google.zxing.common;
-
-import java.util.Arrays;
-
 /**
  * <p>A simple, fast array of bits, represented compactly by an array of ints internally.</p>
  *
  * @author Sean Owen
  */
-public final class BitArray implements Cloneable {
+export default class BitArray {
 
-  private int[] bits;
-  private int size;
-
-  public BitArray() {
-    this.size = 0;
-    this.bits = new int[1];
-  }
-
-  public BitArray(int size) {
+  constructor(size = 0, bits = []) {
     this.size = size;
-    this.bits = makeArray(size);
-  }
-
-  // For testing only
-  BitArray(int[] bits, int size) {
     this.bits = bits;
-    this.size = size;
   }
 
-  public int getSize() {
-    return size;
+  getSize() {
+    return this.size;
   }
 
-  public int getSizeInBytes() {
-    return (size + 7) / 8;
-  }
-
-  private void ensureCapacity(int size) {
-    if (size > bits.length * 32) {
-      int[] newBits = makeArray(size);
-      System.arraycopy(bits, 0, newBits, 0, bits.length);
-      this.bits = newBits;
-    }
+  getSizeInBytes() {
+    return (this.size + 7) / 8;
   }
 
   /**
    * @param i bit to get
-   * @return true iff bit i is set
+   * @return Boolean true iff bit i is set
    */
-  public boolean get(int i) {
-    return (bits[i / 32] & (1 << (i & 0x1F))) != 0;
+  get(i) {
+    return (this.bits[i / 32] & (1 << (i & 0x1F))) != 0;
   }
 
   /**
@@ -73,8 +47,8 @@ public final class BitArray implements Cloneable {
    *
    * @param i bit to set
    */
-  public void set(int i) {
-    bits[i / 32] |= 1 << (i & 0x1F);
+  set(i) {
+    this.bits[i / 32] |= 1 << (i & 0x1F);
   }
 
   /**
@@ -82,8 +56,8 @@ public final class BitArray implements Cloneable {
    *
    * @param i bit to set
    */
-  public void flip(int i) {
-    bits[i / 32] ^= 1 << (i & 0x1F);
+  flip(i) {
+    this.bits[i / 32] ^= 1 << (i & 0x1F);
   }
 
   /**
@@ -92,21 +66,21 @@ public final class BitArray implements Cloneable {
    *  at or beyond this given index
    * @see #getNextUnset(int)
    */
-  public int getNextSet(int from) {
-    if (from >= size) {
-      return size;
+  getNextSet(from) {
+    if (from >= this.size) {
+      return this.size;
     }
-    int bitsOffset = from / 32;
-    int currentBits = bits[bitsOffset];
+    let bitsOffset = from / 32;
+    let currentBits = bits[bitsOffset];
     // mask off lesser bits first
     currentBits &= ~((1 << (from & 0x1F)) - 1);
     while (currentBits == 0) {
-      if (++bitsOffset == bits.length) {
+      if (++bitsOffset == this.bits.length) {
         return size;
       }
-      currentBits = bits[bitsOffset];
+      currentBits = this.bits[bitsOffset];
     }
-    int result = (bitsOffset * 32) + Integer.numberOfTrailingZeros(currentBits);
+    const result = (bitsOffset * 32) + BitArray.numberOfTrailingZeros(currentBits);
     return result > size ? size : result;
   }
 
@@ -115,21 +89,21 @@ public final class BitArray implements Cloneable {
    * @return index of next unset bit, or {@code size} if none are unset until the end
    * @see #getNextSet(int)
    */
-  public int getNextUnset(int from) {
-    if (from >= size) {
+  getNextUnset(from) {
+    if (from >= this.size) {
       return size;
     }
-    int bitsOffset = from / 32;
-    int currentBits = ~bits[bitsOffset];
+    let bitsOffset = from / 32;
+    let currentBits = ~this.bits[bitsOffset];
     // mask off lesser bits first
     currentBits &= ~((1 << (from & 0x1F)) - 1);
     while (currentBits == 0) {
-      if (++bitsOffset == bits.length) {
+      if (++bitsOffset == this.bits.length) {
         return size;
       }
-      currentBits = ~bits[bitsOffset];
+      currentBits = ~this.bits[bitsOffset];
     }
-    int result = (bitsOffset * 32) + Integer.numberOfTrailingZeros(currentBits);
+    const result = (bitsOffset * 32) + BitArray.numberOfTrailingZeros(currentBits);
     return result > size ? size : result;
   }
 
@@ -140,8 +114,8 @@ public final class BitArray implements Cloneable {
    * @param newBits the new value of the next 32 bits. Note again that the least-significant bit
    * corresponds to bit i, the next-least-significant to i+1, and so on.
    */
-  public void setBulk(int i, int newBits) {
-    bits[i / 32] = newBits;
+  setBulk(i, newBits) {
+    this.bits[i / 32] = newBits;
   }
 
   /**
@@ -150,40 +124,37 @@ public final class BitArray implements Cloneable {
    * @param start start of range, inclusive.
    * @param end end of range, exclusive
    */
-  public void setRange(int start, int end) {
+  setRange(start, end) {
     if (end < start) {
-      throw new IllegalArgumentException();
+      throw new IllegalArgumentException(); //FIXME
     }
-    if (end == start) {
+    if (end === start) {
       return;
     }
     end--; // will be easier to treat this as the last actually set bit -- inclusive
-    int firstInt = start / 32;
-    int lastInt = end / 32;
-    for (int i = firstInt; i <= lastInt; i++) {
-      int firstBit = i > firstInt ? 0 : start & 0x1F;
-      int lastBit = i < lastInt ? 31 : end & 0x1F;
-      int mask;
-      if (firstBit == 0 && lastBit == 31) {
+    const firstInt = start / 32;
+    const lastInt = end / 32;
+    for (let i = firstInt; i <= lastInt; i++) {
+      const firstBit = i > firstInt ? 0 : start & 0x1F;
+      const lastBit = i < lastInt ? 31 : end & 0x1F;
+      let mask;
+      if (firstBit === 0 && lastBit === 31) {
         mask = -1;
       } else {
         mask = 0;
-        for (int j = firstBit; j <= lastBit; j++) {
+        for (let j = firstBit; j <= lastBit; j++) {
           mask |= 1 << j;
         }
       }
-      bits[i] |= mask;
+      this.bits[i] |= mask;
     }
   }
 
   /**
    * Clears all bits (sets to false).
    */
-  public void clear() {
-    int max = bits.length;
-    for (int i = 0; i < max; i++) {
-      bits[i] = 0;
-    }
+  clear() {
+    this.bits = [];
   }
 
   /**
@@ -192,47 +163,46 @@ public final class BitArray implements Cloneable {
    * @param start start of range, inclusive.
    * @param end end of range, exclusive
    * @param value if true, checks that bits in range are set, otherwise checks that they are not set
-   * @return true iff all bits are set or not set in range, according to value argument
+   * @return Boolean true iff all bits are set or not set in range, according to value argument
    * @throws IllegalArgumentException if end is less than or equal to start
    */
-  public boolean isRange(int start, int end, boolean value) {
+  isRange(start, end, value) {
     if (end < start) {
-      throw new IllegalArgumentException();
+      throw new IllegalArgumentException(); // FIXME
     }
-    if (end == start) {
+    if (end === start) {
       return true; // empty range matches
     }
     end--; // will be easier to treat this as the last actually set bit -- inclusive
-    int firstInt = start / 32;
-    int lastInt = end / 32;
-    for (int i = firstInt; i <= lastInt; i++) {
-      int firstBit = i > firstInt ? 0 : start & 0x1F;
-      int lastBit = i < lastInt ? 31 : end & 0x1F;
-      int mask;
+    const firstInt = start / 32;
+    const lastInt = end / 32;
+    for (let i = firstInt; i <= lastInt; i++) {
+      const firstBit = i > firstInt ? 0 : start & 0x1F;
+      const lastBit = i < lastInt ? 31 : end & 0x1F;
+      let mask;
       if (firstBit == 0 && lastBit == 31) {
         mask = -1;
       } else {
         mask = 0;
-        for (int j = firstBit; j <= lastBit; j++) {
+        for (let j = firstBit; j <= lastBit; j++) {
           mask |= 1 << j;
         }
       }
 
       // Return false if we're looking for 1s and the masked bits[i] isn't all 1s (that is,
       // equals the mask, or we're looking for 0s and the masked portion is not all 0s
-      if ((bits[i] & mask) != (value ? mask : 0)) {
+      if ((this.bits[i] & mask) != (value ? mask : 0)) {
         return false;
       }
     }
     return true;
   }
 
-  public void appendBit(boolean bit) {
-    ensureCapacity(size + 1);
+  appendBit(bit) {
     if (bit) {
-      bits[size / 32] |= 1 << (size & 0x1F);
+      this.bits[this.size / 32] |= 1 << (this.size & 0x1F);
     }
-    size++;
+    this.size++;
   }
 
   /**
@@ -243,32 +213,30 @@ public final class BitArray implements Cloneable {
    * @param value {@code int} containing bits to append
    * @param numBits bits from value to append
    */
-  public void appendBits(int value, int numBits) {
+  appendBits(value, numBits) {
     if (numBits < 0 || numBits > 32) {
       throw new IllegalArgumentException("Num bits must be between 0 and 32");
     }
-    ensureCapacity(size + numBits);
-    for (int numBitsLeft = numBits; numBitsLeft > 0; numBitsLeft--) {
-      appendBit(((value >> (numBitsLeft - 1)) & 0x01) == 1);
+    for (let numBitsLeft = numBits; numBitsLeft > 0; numBitsLeft--) {
+      this.appendBit(((value >> (numBitsLeft - 1)) & 0x01) == 1);
     }
   }
 
-  public void appendBitArray(BitArray other) {
-    int otherSize = other.size;
-    ensureCapacity(size + otherSize);
-    for (int i = 0; i < otherSize; i++) {
-      appendBit(other.get(i));
+  appendBitArray(other) {
+    const otherSize = other.size;
+    for (let i = 0; i < otherSize; i++) {
+      this.appendBit(other.get(i));
     }
   }
 
-  public void xor(BitArray other) {
-    if (bits.length != other.bits.length) {
-      throw new IllegalArgumentException("Sizes don't match");
+  xor(other) {
+    if (this.bits.length !== other.bits.length) {
+      throw new IllegalArgumentException("Sizes don't match"); //FIXME
     }
-    for (int i = 0; i < bits.length; i++) {
+    for (let i = 0; i < this.bits.length; i++) {
       // The last byte could be incomplete (i.e. not have 8 bits in
       // it) but there is no problem since 0 XOR 0 == 0.
-      bits[i] ^= other.bits[i];
+      this.bits[i] ^= other.bits[i];
     }
   }
 
@@ -280,16 +248,16 @@ public final class BitArray implements Cloneable {
    * @param offset position in array to start writing
    * @param numBytes how many bytes to write
    */
-  public void toBytes(int bitOffset, byte[] array, int offset, int numBytes) {
-    for (int i = 0; i < numBytes; i++) {
-      int theByte = 0;
-      for (int j = 0; j < 8; j++) {
-        if (get(bitOffset)) {
+  toBytes(bitOffset, array, offset, numBytes) {
+    for (let i = 0; i < numBytes; i++) {
+      let theByte = 0;
+      for (let j = 0; j < 8; j++) {
+        if (this.get(bitOffset)) {
           theByte |= 1 << (7 - j);
         }
         bitOffset++;
       }
-      array[offset + i] = (byte) theByte;
+      array[offset + i] = theByte;
     }
   }
 
@@ -297,79 +265,98 @@ public final class BitArray implements Cloneable {
    * @return underlying array of ints. The first element holds the first 32 bits, and the least
    *         significant bit is bit 0.
    */
-  public int[] getBitArray() {
-    return bits;
+  getBitArray() {
+    return this.bits;
   }
 
   /**
    * Reverses all bits in the array.
    */
-  public void reverse() {
-    int[] newBits = new int[bits.length];
+  reverse() {
+    const newBits = []
     // reverse all int's first
-    int len = ((size-1) / 32);
-    int oldBitsLen = len + 1;
-    for (int i = 0; i < oldBitsLen; i++) {
-      long x = (long) bits[i];
-      x = ((x >>  1) & 0x55555555L) | ((x & 0x55555555L) <<  1);
-      x = ((x >>  2) & 0x33333333L) | ((x & 0x33333333L) <<  2);
-      x = ((x >>  4) & 0x0f0f0f0fL) | ((x & 0x0f0f0f0fL) <<  4);
-      x = ((x >>  8) & 0x00ff00ffL) | ((x & 0x00ff00ffL) <<  8);
-      x = ((x >> 16) & 0x0000ffffL) | ((x & 0x0000ffffL) << 16);
-      newBits[len - i] = (int) x;
+    const len = ((this.size - 1) / 32);
+    const oldBitsLen = len + 1;
+    for (let i = 0; i < oldBitsLen; i++) {
+      let x = this.bits[i];
+      x = (x & 0x55555555) << 1 | (x >>> 1) & 0x55555555;
+      x = (x & 0x33333333) << 2 | (x >>> 2) & 0x33333333;
+      x = (x & 0x0f0f0f0f) << 4 | (x >>> 4) & 0x0f0f0f0f;
+      x = (x << 24) | ((x & 0xff00) << 8) | ((x >>> 8) & 0xff00) | (x >>> 24);
+      newBits[len - i] = x;
     }
     // now correct the int's if the bit size isn't a multiple of 32
-    if (size != oldBitsLen * 32) {
-      int leftOffset = oldBitsLen * 32 - size;
-      int mask = 1;
-      for (int i = 0; i < 31 - leftOffset; i++) {
+    if (this.size !== oldBitsLen * 32) {
+      const leftOffset = oldBitsLen * 32 - size;
+      let mask = 1;
+      for (let i = 0; i < 31 - leftOffset; i++) {
         mask = (mask << 1) | 1;
       }
-      int currentInt = (newBits[0] >> leftOffset) & mask;
-      for (int i = 1; i < oldBitsLen; i++) {
-        int nextInt = newBits[i];
+      let currentInt = (newBits[0] >> leftOffset) & mask;
+      for (let i = 1; i < oldBitsLen; i++) {
+        const nextInt = newBits[i];
         currentInt |= nextInt << (32 - leftOffset);
         newBits[i - 1] = currentInt;
         currentInt = (nextInt >> leftOffset) & mask;
       }
       newBits[oldBitsLen - 1] = currentInt;
     }
-    bits = newBits;
+    this.bits = newBits;
   }
 
-  private static int[] makeArray(int size) {
-    return new int[(size + 31) / 32];
-  }
-
-  @Override
-  public boolean equals(Object o) {
+  equals(o) {
     if (!(o instanceof BitArray)) {
       return false;
     }
-    BitArray other = (BitArray) o;
-    return size == other.size && Arrays.equals(bits, other.bits);
+    return size === o.size && Arrays.equals(bits, other.bits); // FIXME
   }
 
-  @Override
-  public int hashCode() {
+  // FIXME useful?
+  hashCode() {
     return 31 * size + Arrays.hashCode(bits);
   }
 
-  @Override
-  public String toString() {
-    StringBuilder result = new StringBuilder(size);
-    for (int i = 0; i < size; i++) {
+  toString() {
+    const result = [];
+    for (let i = 0; i < size; i++) {
       if ((i & 0x07) == 0) {
-        result.append(' ');
+        result.push(' ');
       }
-      result.append(get(i) ? 'X' : '.');
+      result.push(this.get(i) ? 'X' : '.');
     }
-    return result.toString();
+    return result.join('');
   }
 
-  @Override
-  public BitArray clone() {
-    return new BitArray(bits.clone(), size);
+  clone() {
+    return new BitArray(this.bits.slice(0), size);
   }
 
+  static numberOfTrailingZeros(i) {
+    let y;
+    if (i === 0) {
+      return 32;
+    }
+    let n = 31;
+    y = i << 16;
+    if (y !== 0) {
+      n = n -16;
+      i = y;
+    }
+    y = i << 8;
+    if (y !== 0) {
+      n = n - 8;
+      i = y;
+    }
+    y = i << 4;
+    if (y !== 0) {
+      n = n - 4;
+      i = y;
+    }
+    y = i << 2;
+    if (y !== 0) {
+      n = n - 2;
+      i = y;
+    }
+    return n - ((i << 1) >>> 31);
+  }
 }

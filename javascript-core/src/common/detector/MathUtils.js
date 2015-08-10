@@ -14,12 +14,7 @@
  * limitations under the License.
  */
 
-package com.google.zxing.common.detector;
-
-public final class MathUtils {
-
-  private MathUtils() {
-  }
+export default class MathUtils {
 
   /**
    * Ends up being a bit faster than {@link Math#round(float)}. This merely rounds its
@@ -30,20 +25,13 @@ public final class MathUtils {
    * @param d real value to round
    * @return nearest {@code int}
    */
-  public static int round(float d) {
-    return (int) (d + (d < 0.0f ? -0.5f : 0.5f));
+  static round(d) {
+    return d + (d < 0.0 ? -0.5 : 0.5);
   }
 
-  public static float distance(float aX, float aY, float bX, float bY) {
-    float xDiff = aX - bX;
-    float yDiff = aY - bY;
-    return (float) Math.sqrt(xDiff * xDiff + yDiff * yDiff);
+  static distance(aX, aY, bX, bY) {
+    const xDiff = aX - bX;
+    const yDiff = aY - bY;
+    return Math.sqrt(xDiff * xDiff + yDiff * yDiff);
   }
-
-  public static float distance(int aX, int aY, int bX, int bY) {
-    int xDiff = aX - bX;
-    int yDiff = aY - bY;
-    return (float) Math.sqrt(xDiff * xDiff + yDiff * yDiff);
-  }
-
 }
