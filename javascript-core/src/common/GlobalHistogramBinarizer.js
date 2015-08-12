@@ -14,10 +14,10 @@
  * limitations under the License.
  */
 
-
 import Binarizer from '../Binarizer';
 import BitArray from './BitArray';
 import BitMatrix from './BitMatrix';
+import NotFoundException from '../NotFoundException';
 
 const LUMINANCE_BITS = 5;
 const LUMINANCE_SHIFT = 8 - LUMINANCE_BITS;
@@ -45,9 +45,9 @@ export default class GlobalHistogramBinarizer extends Binarizer {
 
   // Applies simple sharpening to the row data to improve performance of the 1D Readers.
   getBlackRow(y, row) {
-    const source = getLuminanceSource();
+    const source = this.getLuminanceSource();
     const width = source.getWidth();
-    if (row == null || row.getSize() < width) {
+    if (!row || row.getSize() < width) {
       row = new BitArray(width);
     } else {
       row.clear();
@@ -79,7 +79,7 @@ export default class GlobalHistogramBinarizer extends Binarizer {
 
   // Does not sharpen the data, as this call is intended to only be used by 2D Readers.
   getBlackMatrix() {
-    const source = getLuminanceSource();
+    const source = this.getLuminanceSource();
     const width = source.getWidth();
     const height = source.getHeight();
     const matrix = new BitMatrix(width, height);

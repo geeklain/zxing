@@ -14,37 +14,20 @@
  * limitations under the License.
  */
 
-package com.google.zxing;
-
-import java.util.EnumMap;
-import java.util.Map;
 
 /**
  * <p>Encapsulates the result of decoding a barcode within an image.</p>
  *
  * @author Sean Owen
  */
-public final class Result {
+export default class Result {
 
-  private final String text;
-  private final byte[] rawBytes;
-  private ResultPoint[] resultPoints;
-  private final BarcodeFormat format;
-  private Map<ResultMetadataType,Object> resultMetadata;
-  private final long timestamp;
+  constructor(text,
+              rawBytes,
+              resultPoints,
+              format,
+              timestamp = Date.now()) {
 
-  public Result(String text,
-                byte[] rawBytes,
-                ResultPoint[] resultPoints,
-                BarcodeFormat format) {
-    this(text, rawBytes, resultPoints, format, System.currentTimeMillis());
-  }
-
-  public Result(String text,
-                byte[] rawBytes,
-                ResultPoint[] resultPoints,
-                BarcodeFormat format,
-                long timestamp) {
     this.text = text;
     this.rawBytes = rawBytes;
     this.resultPoints = resultPoints;
@@ -56,15 +39,15 @@ public final class Result {
   /**
    * @return raw text encoded by the barcode
    */
-  public String getText() {
-    return text;
+  getText() {
+    return this.text;
   }
 
   /**
    * @return raw bytes encoded by the barcode, if applicable, otherwise {@code null}
    */
-  public byte[] getRawBytes() {
-    return rawBytes;
+  getRawBytes() {
+    return this.rawBytes;
   }
 
   /**
@@ -72,15 +55,15 @@ public final class Result {
    *         identifying finder patterns or the corners of the barcode. The exact meaning is
    *         specific to the type of barcode that was decoded.
    */
-  public ResultPoint[] getResultPoints() {
-    return resultPoints;
+  getResultPoints() {
+    return this.resultPoints;
   }
 
   /**
    * @return {@link BarcodeFormat} representing the format of the barcode that was decoded
    */
-  public BarcodeFormat getBarcodeFormat() {
-    return format;
+  getBarcodeFormat() {
+    return this.format;
   }
 
   /**
@@ -88,46 +71,42 @@ public final class Result {
    *   {@code null}. This contains optional metadata about what was detected about the barcode,
    *   like orientation.
    */
-  public Map<ResultMetadataType,Object> getResultMetadata() {
-    return resultMetadata;
+  getResultMetadata() {
+    return this.resultMetadata;
   }
 
-  public void putMetadata(ResultMetadataType type, Object value) {
-    if (resultMetadata == null) {
-      resultMetadata = new EnumMap<>(ResultMetadataType.class);
+  putMetadata(type, value) {
+    if (!this.resultMetadata) {
+      this.resultMetadata = {};
     }
-    resultMetadata.put(type, value);
+    this.resultMetadata[type] = value;
   }
 
-  public void putAllMetadata(Map<ResultMetadataType,Object> metadata) {
+  putAllMetadata(metadata) {
     if (metadata != null) {
-      if (resultMetadata == null) {
-        resultMetadata = metadata;
+      if (!this.resultMetadata) {
+        this.resultMetadata = metadata;
       } else {
-        resultMetadata.putAll(metadata);
+        Object.assign(this.resultMetadata, metadata);
       }
     }
   }
 
-  public void addResultPoints(ResultPoint[] newPoints) {
-    ResultPoint[] oldPoints = resultPoints;
-    if (oldPoints == null) {
-      resultPoints = newPoints;
-    } else if (newPoints != null && newPoints.length > 0) {
-      ResultPoint[] allPoints = new ResultPoint[oldPoints.length + newPoints.length];
-      System.arraycopy(oldPoints, 0, allPoints, 0, oldPoints.length);
-      System.arraycopy(newPoints, 0, allPoints, oldPoints.length, newPoints.length);
-      resultPoints = allPoints;
+  addResultPoints(newPoints) {
+    const oldPoints = this.resultPoints;
+    if (!oldPoints) {
+      this.resultPoints = newPoints;
+    } else if (newPoints && newPoints.length > 0) {
+      this.resultPoints = oldPoints.concat(newPoints);
     }
   }
 
-  public long getTimestamp() {
-    return timestamp;
+  getTimestamp() {
+    return this.timestamp;
   }
 
-  @Override
-  public String toString() {
-    return text;
+  toString() {
+    return this.text;
   }
 
 }

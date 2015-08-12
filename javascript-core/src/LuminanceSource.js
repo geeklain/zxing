@@ -14,7 +14,8 @@
  * limitations under the License.
  */
 
-package com.google.zxing;
+//import InvertedLuminanceSource from './InvertedLuminanceSource';
+import UnsupportedOperationException from './UnsupportedOperationException';
 
 /**
  * The purpose of this class hierarchy is to abstract different bitmap implementations across
@@ -25,58 +26,31 @@ package com.google.zxing;
  *
  * @author dswitkin@google.com (Daniel Switkin)
  */
-public abstract class LuminanceSource {
+export default class LuminanceSource {
 
-  private final int width;
-  private final int height;
-
-  protected LuminanceSource(int width, int height) {
+  constructor(width, height) {
     this.width = width;
     this.height = height;
   }
 
   /**
-   * Fetches one row of luminance data from the underlying platform's bitmap. Values range from
-   * 0 (black) to 255 (white). Because Java does not have an unsigned byte type, callers will have
-   * to bitwise and with 0xff for each value. It is preferable for implementations of this method
-   * to only fetch this row rather than the whole image, since no 2D Readers may be installed and
-   * getMatrix() may never be called.
-   *
-   * @param y The row to fetch, which must be in [0,getHeight())
-   * @param row An optional preallocated array. If null or too small, it will be ignored.
-   *            Always use the returned object, and ignore the .length of the array.
-   * @return An array containing the luminance data.
-   */
-  public abstract byte[] getRow(int y, byte[] row);
-
-  /**
-   * Fetches luminance data for the underlying bitmap. Values should be fetched using:
-   * {@code int luminance = array[y * width + x] & 0xff}
-   *
-   * @return A row-major 2D array of luminance values. Do not use result.length as it may be
-   *         larger than width * height bytes on some platforms. Do not modify the contents
-   *         of the result.
-   */
-  public abstract byte[] getMatrix();
-
-  /**
    * @return The width of the bitmap.
    */
-  public final int getWidth() {
-    return width;
+  getWidth() {
+    return this.width;
   }
 
   /**
    * @return The height of the bitmap.
    */
-  public final int getHeight() {
-    return height;
+  getHeight() {
+    return this.height;
   }
 
   /**
    * @return Whether this subclass supports cropping.
    */
-  public boolean isCropSupported() {
+  isCropSupported() {
     return false;
   }
 
@@ -84,29 +58,25 @@ public abstract class LuminanceSource {
    * Returns a new object with cropped image data. Implementations may keep a reference to the
    * original data rather than a copy. Only callable if isCropSupported() is true.
    *
-   * @param left The left coordinate, which must be in [0,getWidth())
-   * @param top The top coordinate, which must be in [0,getHeight())
-   * @param width The width of the rectangle to crop.
-   * @param height The height of the rectangle to crop.
    * @return A cropped version of this object.
    */
-  public LuminanceSource crop(int left, int top, int width, int height) {
-    throw new UnsupportedOperationException("This luminance source does not support cropping.");
+  crop() {
+    throw new UnsupportedOperationException('This luminance source does not support cropping.');
   }
 
   /**
-   * @return Whether this subclass supports counter-clockwise rotation.
+   * @return Boolean Whether this subclass supports counter-clockwise rotation.
    */
-  public boolean isRotateSupported() {
+  isRotateSupported() {
     return false;
   }
 
   /**
-   * @return a wrapper of this {@code LuminanceSource} which inverts the luminances it returns -- black becomes
-   *  white and vice versa, and each value becomes (255-value).
+   * @return InvertedLuminanceSource a wrapper of this {@code LuminanceSource} which inverts the luminances it returns
+   *   -- black becomes white and vice versa, and each value becomes (255-value).
    */
-  public LuminanceSource invert() {
-    return new InvertedLuminanceSource(this);
+  invert() {
+    //return new InvertedLuminanceSource(this);
   }
 
   /**
@@ -115,8 +85,8 @@ public abstract class LuminanceSource {
    *
    * @return A rotated version of this object.
    */
-  public LuminanceSource rotateCounterClockwise() {
-    throw new UnsupportedOperationException("This luminance source does not support rotation by 90 degrees.");
+  rotateCounterClockwise() {
+    throw new UnsupportedOperationException('This luminance source does not support rotation by 90 degrees.');
   }
 
   /**
@@ -125,19 +95,18 @@ public abstract class LuminanceSource {
    *
    * @return A rotated version of this object.
    */
-  public LuminanceSource rotateCounterClockwise45() {
-    throw new UnsupportedOperationException("This luminance source does not support rotation by 45 degrees.");
+  rotateCounterClockwise45() {
+    throw new UnsupportedOperationException('This luminance source does not support rotation by 45 degrees.');
   }
 
-  @Override
-  public final String toString() {
-    byte[] row = new byte[width];
-    StringBuilder result = new StringBuilder(height * (width + 1));
-    for (int y = 0; y < height; y++) {
-      row = getRow(y, row);
-      for (int x = 0; x < width; x++) {
-        int luminance = row[x] & 0xFF;
-        char c;
+  toString() {
+    let row = [];
+    const result = [];
+    for (let y = 0; y < this.height; y++) {
+      row = this.getRow(y, row);
+      for (let x = 0; x < this.width; x++) {
+        const luminance = row[x] & 0xFF;
+        let c;
         if (luminance < 0x40) {
           c = '#';
         } else if (luminance < 0x80) {
@@ -147,11 +116,11 @@ public abstract class LuminanceSource {
         } else {
           c = ' ';
         }
-        result.append(c);
+        result.push(c);
       }
-      result.append('\n');
+      result.push('\n');
     }
-    return result.toString();
+    return result.join('');
   }
 
 }

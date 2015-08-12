@@ -15,6 +15,7 @@
  */
 
 import BitArray from './BitArray';
+import IllegalArgumentException from '../IllegalArgumentException';
 
 /**
  * <p>Represents a 2D matrix of bits. In function arguments below, and throughout the common
@@ -34,14 +35,14 @@ import BitArray from './BitArray';
 
 export default class BitMatrix {
 
-  constructor(width, height = width, rowSize = (width + 31) / 32, bits = []) {
+  constructor(width, height = width, rowSize = Math.floor((width + 31) / 32), bits = []) {
 
     if (!width || width < 1) {
-      throw new IllegalArgumentException("The width must be greater than 0");
+      throw new IllegalArgumentException('The width must be greater than 0');
     }
 
     if (!height || height < 1) {
-      throw new IllegalArgumentException("The height must be greater than 0");
+      throw new IllegalArgumentException('The height must be greater than 0');
     }
 
     this.width = width;
@@ -55,7 +56,7 @@ export default class BitMatrix {
       throw new IllegalArgumentException();
     }
 
-    const bits = new boolean[stringRepresentation.length()];
+    const bits = [];
     let bitsPos = 0;
     let rowStartPos = 0;
     let rowLength = -1;
@@ -68,13 +69,13 @@ export default class BitMatrix {
           if (rowLength === -1) {
             rowLength = bitsPos - rowStartPos;
           } else if (bitsPos - rowStartPos !== rowLength) {
-            throw new IllegalArgumentException("row lengths do not match");
+            throw new IllegalArgumentException('row lengths do not match');
           }
           rowStartPos = bitsPos;
           nRows++;
         }
         pos++;
-      }  else if (stringRepresentation.substring(pos, pos + setString.length()) === setString) {
+      } else if (stringRepresentation.substring(pos, pos + setString.length()) === setString) {
         pos += setString.length();
         bits[bitsPos] = true;
         bitsPos++;
@@ -84,16 +85,16 @@ export default class BitMatrix {
         bitsPos++;
       } else {
         throw new IllegalArgumentException(
-            "illegal character encountered: " + stringRepresentation.substring(pos));
+          'illegal character encountered: ' + stringRepresentation.substring(pos));
       }
     }
 
     // no EOL at end?
     if (bitsPos > rowStartPos) {
-      if(rowLength === -1) {
+      if (rowLength === -1) {
         rowLength = bitsPos - rowStartPos;
       } else if (bitsPos - rowStartPos !== rowLength) {
-        throw new IllegalArgumentException("row lengths do not match");
+        throw new IllegalArgumentException('row lengths do not match');
       }
       nRows++;
     }
@@ -115,7 +116,7 @@ export default class BitMatrix {
    * @return Boolean value of given bit in matrix
    */
   get(x, y) {
-    const offset = y * this.rowSize + (x / 32);
+    const offset = y * this.rowSize + Math.floor(x / 32);
     return ((this.bits[offset] >>> (x & 0x1f)) & 1) !== 0;
   }
 
@@ -126,12 +127,12 @@ export default class BitMatrix {
    * @param y The vertical component (i.e. which row)
    */
   set(x, y) {
-    const offset = y * this.rowSize + (x / 32);
+    const offset = y * this.rowSize + Math.floor(x / 32);
     this.bits[offset] |= 1 << (x & 0x1f);
   }
 
   unset(x, y) {
-    const offset = y * this.rowSize + (x / 32);
+    const offset = y * this.rowSize + Math.floor(x / 32);
     this.bits[offset] &= ~(1 << (x & 0x1f));
   }
 
@@ -142,7 +143,7 @@ export default class BitMatrix {
    * @param y The vertical component (i.e. which row)
    */
   flip(x, y) {
-    const offset = y * this.rowSize + (x / 32);
+    const offset = y * this.rowSize + Math.floor(x / 32);
     this.bits[offset] ^= 1 << (x & 0x1f);
   }
 
@@ -156,9 +157,9 @@ export default class BitMatrix {
     if (this.width != mask.getWidth()
         || this.height != mask.getHeight()
         || this.rowSize != mask.getRowSize()) {
-      throw new IllegalArgumentException("input matrix dimensions do not match");
+      throw new IllegalArgumentException('input matrix dimensions do not match');
     }
-    const rowArray = new BitArray(this.width / 32 + 1);
+    const rowArray = new BitArray(Math.floor(this.width / 32) + 1);
     for (let y = 0; y < this.height; y++) {
       const offset = y * this.rowSize;
       const row = mask.getRow(y, rowArray).getBitArray();
@@ -185,20 +186,20 @@ export default class BitMatrix {
    */
   setRegion(left, top, width, height) {
     if (top < 0 || left < 0) {
-      throw new IllegalArgumentException("Left and top must be nonnegative");
+      throw new IllegalArgumentException('Left and top must be nonnegative');
     }
     if (height < 1 || width < 1) {
-      throw new IllegalArgumentException("Height and width must be at least 1");
+      throw new IllegalArgumentException('Height and width must be at least 1');
     }
     const right = left + width;
     const bottom = top + height;
     if (bottom > this.height || right > this.width) {
-      throw new IllegalArgumentException("The region must fit inside the matrix");
+      throw new IllegalArgumentException('The region must fit inside the matrix');
     }
     for (let y = top; y < bottom; y++) {
       const offset = y * this.rowSize;
       for (let x = left; x < right; x++) {
-        this.bits[offset + (x / 32)] |= 1 << (x & 0x1f);
+        this.bits[offset + Math.floor(x / 32)] |= 1 << (x & 0x1f);
       }
     }
   }
@@ -212,8 +213,8 @@ export default class BitMatrix {
    *         your own row
    */
   getRow(y, row) {
-    if (!row || row.getSize() < width) {
-      row = new BitArray(width);
+    if (!row || row.getSize() < this.width) {
+      row = new BitArray(this.width);
     } else {
       row.clear();
     }
@@ -242,7 +243,7 @@ export default class BitMatrix {
     const height = this.getHeight();
     let topRow = new BitArray(width);
     let bottomRow = new BitArray(width);
-    for (let i = 0; i < (height+1) / 2; i++) {
+    for (let i = 0; i < (height + 1) / 2; i++) {
       topRow = this.getRow(i, topRow);
       bottomRow = this.getRow(height - 1 - i, bottomRow);
       topRow.reverse();
@@ -323,7 +324,7 @@ export default class BitMatrix {
 
     const theBits = this.bits[bitsOffset];
     let bit = 0;
-    while ((theBits << (31-bit)) === 0) {
+    while ((theBits << (31 - bit)) === 0) {
       bit++;
     }
     x += bit;
@@ -380,18 +381,11 @@ export default class BitMatrix {
     return this.width === o.width
            && this.height === o.height
            && this.rowSize === o.rowSize
-           && Arrays.equals(bits, o.bits); // FIXME
+           && this.bits.
+             every(function (element, index) {
+                     return element === o.bits[index];
+                   });
   }
-
-  hashCode() { // FIXME useful?
-    let hash = this.width;
-    hash = 31 * hash + this.width;
-    hash = 31 * hash + this.height;
-    hash = 31 * hash + this.rowSize;
-    hash = 31 * hash + Arrays.hashCode(bits);
-    return hash;
-  }
-
 
   /**
    * @param setString representation of a set bit

@@ -17,6 +17,8 @@
 import DecodeHintType from '../DecodeHintType';
 import ResultMetadataType from '../ResultMetadataType';
 import ResultPoint from '../ResultPoint';
+import BitArray from '../common/BitArray';
+import NotFoundException from '../NotFoundException';
 
 /**
  * Encapsulates functionality and implementation that is common to all families
@@ -30,7 +32,7 @@ export default class OneDReader {
   // Note that we don't try rotation without the try harder flag, even if rotation was supported.
   decode(image, hints) {
     try {
-      return doDecode(image, hints);
+      return this.doDecode(image, hints);
     } catch (nfe) {
       const tryHarder = hints && hints[DecodeHintType.TRY_HARDER];
       if (tryHarder && image.isRotateSupported()) {
@@ -95,7 +97,7 @@ export default class OneDReader {
     for (let x = 0; x < maxLines; x++) {
 
       // Scanning from the middle out. Determine which row we're looking at next:
-      const rowStepsAboveOrBelow = (x + 1) / 2;
+      const rowStepsAboveOrBelow = Math.floor((x + 1) / 2);
       const isAbove = (x & 0x01) == 0; // i.e. is x even?
       const rowNumber = middle + rowStep * (isAbove ? rowStepsAboveOrBelow : -rowStepsAboveOrBelow);
       if (rowNumber < 0 || rowNumber >= height) {
@@ -127,7 +129,7 @@ export default class OneDReader {
         }
         try {
           // Look for a barcode
-          const result = decodeRow(rowNumber, row, hints);
+          const result = this.decodeRow(rowNumber, row, hints);
           // We found our barcode
           if (attempt === 1) {
             // But it was upside down, so note that
@@ -141,12 +143,15 @@ export default class OneDReader {
           }
           return result;
         } catch (e) {
+          /*eslint-disable no-console */
+          console.error(e);
+          /*eslint-enable no-console */
           // continue -- just couldn't decode this row
         }
       }
     }
 
-    throw NotFoundException.getNotFoundInstance();
+    throw NotFoundException.getNotFoundInstance('Code not found');
   }
 
   /**
@@ -235,7 +240,7 @@ export default class OneDReader {
       return Number.POSITIVE_INFINITY;
     }
 
-    const unitBarWidth = 1.0 * total / patternLength;
+    const unitBarWidth = total / patternLength;
     maxIndividualVariance *= unitBarWidth;
 
     let totalVariance = 0.0;
@@ -250,21 +255,4 @@ export default class OneDReader {
     }
     return totalVariance / total;
   }
-
-  /**
-   * <p>Attempts to decode a one-dimensional barcode format given a single row of
-   * an image.</p>
-   *
-   * @param rowNumber row number from top of the row
-   * @param row the black/white pixel data of the row
-   * @param hints decode hints
-   * @return {@link Result} containing encoded string and start/end of barcode
-   * @throws NotFoundException if no potential barcode is found
-   * @throws ChecksumException if a potential barcode is found but does not pass its checksum
-   * @throws FormatException if a potential barcode is found but format is invalid
-   */
-  decodeRow(rowNumber, row, hints) {
-    throw new Error('Method not implemented!')
-  }
-
 }

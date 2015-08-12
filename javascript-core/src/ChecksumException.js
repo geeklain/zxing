@@ -27,4 +27,9 @@ export default class ChecksumException extends ReaderException {
   constructor(message) {
     super(message);
   }
+
+  static getChecksumInstance(message) {
+    return new ChecksumException(message);
+  }
+
 }

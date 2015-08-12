@@ -21,6 +21,7 @@ import ChecksumException from '../ChecksumException';
 import DecodeHintType from '../DecodeHintType';
 import BarcodeFormat from '../BarcodeFormat';
 import ResultPoint from '../ResultPoint';
+import Result from '../Result';
 
 const CODE_PATTERNS = [
   [2, 1, 2, 2, 2, 2], // 0
@@ -164,10 +165,12 @@ export default class Code128Reader extends OneDReader {
     const rowOffset = row.getNextSet(0);
 
     let counterPosition = 0;
-    const counters = [];
+    const counters = Array.apply(null, Array(6)).map(function () {
+      return 0;
+    });
     let patternStart = rowOffset;
     let isWhite = false;
-    const patternLength = counters.length;
+    const patternLength = 6;
 
     for (let i = rowOffset; i < width; i++) {
       if (row.get(i) ^ isWhite) {
@@ -258,7 +261,9 @@ export default class Code128Reader extends OneDReader {
 
     let lastStart = startPatternInfo[0];
     let nextStart = startPatternInfo[1];
-    const counters = [];
+    const counters = Array.apply(null, Array(6)).map(function () {
+      return 0;
+    });
 
     let lastCode = 0;
     let code = 0;
@@ -294,7 +299,7 @@ export default class Code128Reader extends OneDReader {
 
       // Advance to where the next code will to start
       lastStart = nextStart;
-      counters.forEach(function(counter) {
+      counters.forEach(function (counter) {
         nextStart += counter;
       });
 
@@ -310,10 +315,10 @@ export default class Code128Reader extends OneDReader {
 
         case CODE_CODE_A:
           if (code < 64) {
-            if (shiftUpperMode == upperMode) {
-              result.push(String.fromCharCode(code));
+            if (shiftUpperMode === upperMode) {
+              result.push(String.fromCharCode(code + 32));
             } else {
-              result.push(String.fromCharCode(code + 128));
+              result.push(String.fromCharCode(code + 32 + 128));
             }
             shiftUpperMode = false;
           } else if (code < 96) {
@@ -332,7 +337,7 @@ export default class Code128Reader extends OneDReader {
             switch (code) {
               case CODE_FNC_1:
                 if (convertFNC1) {
-                  if (result.length === 0){
+                  if (result.length === 0) {
                     // GS1 specification 5.4.3.7. and 5.4.6.4. If the first char after the start code
                     // is FNC1 then this is GS1-128. We add the symbology identifier.
                     result.push(']C1');
@@ -376,9 +381,9 @@ export default class Code128Reader extends OneDReader {
         case CODE_CODE_B:
           if (code < 96) {
             if (shiftUpperMode === upperMode) {
-              result.push(String.fromCharCode(code));
+              result.push(String.fromCharCode(code + 32));
             } else {
-              result.push(String.fromCharCode(code + 128));
+              result.push(String.fromCharCode(code + 32 + 128));
             }
             shiftUpperMode = false;
           } else {
@@ -388,7 +393,7 @@ export default class Code128Reader extends OneDReader {
             switch (code) {
               case CODE_FNC_1:
                 if (convertFNC1) {
-                  if (result.length === 0){
+                  if (result.length === 0) {
                     // GS1 specification 5.4.3.7. and 5.4.6.4. If the first char after the start code
                     // is FNC1 then this is GS1-128. We add the symbology identifier.
                     result.push(']C1');
@@ -442,13 +447,13 @@ export default class Code128Reader extends OneDReader {
             switch (code) {
               case CODE_FNC_1:
                 if (convertFNC1) {
-                  if (result.length === 0){
+                  if (result.length === 0) {
                     // GS1 specification 5.4.3.7. and 5.4.6.4. If the first char after the start code
                     // is FNC1 then this is GS1-128. We add the symbology identifier.
                     result.push(']C1');
                   } else {
                     // GS1 specification 5.4.7.5. Every subsequent FNC1 is returned as ASCII 29 (GS)
-                    result.append(String.fromCharCode(29));
+                    result.push(String.fromCharCode(29));
                   }
                 }
                 break;
@@ -468,7 +473,7 @@ export default class Code128Reader extends OneDReader {
 
       // Unshift back to another code set if we were shifted
       if (unshift) {
-        codeSet = codeSet == CODE_CODE_A ? CODE_CODE_B : CODE_CODE_A;
+        codeSet = codeSet === CODE_CODE_A ? CODE_CODE_B : CODE_CODE_A;
       }
 
     }
@@ -502,24 +507,20 @@ export default class Code128Reader extends OneDReader {
     // Only bother if the result had at least one character, and if the checksum digit happened to
     // be a printable character. If it was just interpreted as a control code, nothing to remove.
     if (resultLength > 0 && lastCharacterWasPrintable) {
-      if (codeSet === CODE_CODE_C) {
-        result.splice(resultLength - 2, resultLength);
-      } else {
-        result.splice(resultLength - 1, resultLength);
-      }
+      result.splice(resultLength - 1, 1);
     }
 
     const left = (startPatternInfo[1] + startPatternInfo[0]) / 2.0;
     const right = lastStart + lastPatternSize / 2.0;
 
     return new Result(
-        result.join(''),
-        rawCodes,
-        [
-            new ResultPoint(left, rowNumber),
-            new ResultPoint(right, rowNumber)
-        ],
-        BarcodeFormat.CODE_128);
+      result.join(''),
+      rawCodes,
+      [
+        new ResultPoint(left, rowNumber),
+        new ResultPoint(right, rowNumber)
+      ],
+      BarcodeFormat.CODE_128);
 
   }
 

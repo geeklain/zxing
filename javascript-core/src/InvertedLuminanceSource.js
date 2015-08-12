@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.google.zxing;
+import LuminanceSource from './LuminanceSource';
 
 /**
  * A wrapper implementation of {@link LuminanceSource} which inverts the luminances it returns -- black becomes
@@ -22,67 +22,56 @@ package com.google.zxing;
  * 
  * @author Sean Owen
  */
-public final class InvertedLuminanceSource extends LuminanceSource {
+export default class InvertedLuminanceSource extends LuminanceSource {
 
-  private final LuminanceSource delegate;
-
-  public InvertedLuminanceSource(LuminanceSource delegate) {
+  constructor(delegate) {
     super(delegate.getWidth(), delegate.getHeight());
     this.delegate = delegate;
   }
 
-  @Override
-  public byte[] getRow(int y, byte[] row) {
-    row = delegate.getRow(y, row);
-    int width = getWidth();
-    for (int i = 0; i < width; i++) {
-      row[i] = (byte) (255 - (row[i] & 0xFF));
+  getRow(y, row) {
+    row = this.delegate.getRow(y, row);
+    const width = this.getWidth();
+    for (let i = 0; i < width; i++) {
+      row[i] = 255 - (row[i] & 0xFF);
     }
     return row;
   }
 
-  @Override
-  public byte[] getMatrix() {
-    byte[] matrix = delegate.getMatrix();
-    int length = getWidth() * getHeight();
-    byte[] invertedMatrix = new byte[length];
-    for (int i = 0; i < length; i++) {
-      invertedMatrix[i] = (byte) (255 - (matrix[i] & 0xFF));
+  getMatrix() {
+    const matrix = this.delegate.getMatrix();
+    const length = this.getWidth() * this.getHeight();
+    const invertedMatrix = [];
+    for (let i = 0; i < length; i++) {
+      invertedMatrix[i] = 255 - (matrix[i] & 0xFF);
     }
     return invertedMatrix;
   }
-  
-  @Override
-  public boolean isCropSupported() {
-    return delegate.isCropSupported();
+
+  isCropSupported() {
+    return this.delegate.isCropSupported();
   }
 
-  @Override
-  public LuminanceSource crop(int left, int top, int width, int height) {
-    return new InvertedLuminanceSource(delegate.crop(left, top, width, height));
+  crop(left, top, width, height) {
+    return new InvertedLuminanceSource(this.delegate.crop(left, top, width, height));
   }
 
-  @Override
-  public boolean isRotateSupported() {
-    return delegate.isRotateSupported();
+  isRotateSupported() {
+    return this.delegate.isRotateSupported();
   }
 
   /**
    * @return original delegate {@link LuminanceSource} since invert undoes itself
    */
-  @Override
-  public LuminanceSource invert() {
-    return delegate;
+  invert() {
+    return this.delegate;
   }
 
-  @Override
-  public LuminanceSource rotateCounterClockwise() {
-    return new InvertedLuminanceSource(delegate.rotateCounterClockwise());
+  rotateCounterClockwise() {
+    return new InvertedLuminanceSource(this.delegate.rotateCounterClockwise());
   }
 
-  @Override
-  public LuminanceSource rotateCounterClockwise45() {
-    return new InvertedLuminanceSource(delegate.rotateCounterClockwise45());
+  rotateCounterClockwise45() {
+    return new InvertedLuminanceSource(this.delegate.rotateCounterClockwise45());
   }
-
 }

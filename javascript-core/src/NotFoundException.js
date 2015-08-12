@@ -25,6 +25,10 @@ import ReaderException from './ReaderException';
 export default class NotFoundException extends ReaderException {
 
   constructor(message) {
-    super(message)
+    super(message);
+  }
+
+  static getNotFoundInstance(message) {
+    return new NotFoundException(message);
   }
 }

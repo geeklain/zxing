@@ -93,4 +93,4 @@ export default {
    * at all.
    */
   ALLOWED_EAN_EXTENSIONS: 'ALLOWED_EAN_EXTENSIONS'
-}
+};

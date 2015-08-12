@@ -20,7 +20,7 @@
  *
  * @author Sean Owen
  */
-export default ResultMetadataType = {
+export default {
 
   /**
    * Unspecified, application-specific metadata. Maps to an unspecified {@link Object}.
@@ -91,4 +91,4 @@ export default ResultMetadataType = {
    * parity is given with it.
    */
   STRUCTURED_APPEND_PARITY: 'STRUCTURED_APPEND_PARITY'
-}
+};

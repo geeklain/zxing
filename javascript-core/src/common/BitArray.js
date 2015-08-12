@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 
+import IllegalArgumentException from '../IllegalArgumentException';
+
 /**
  * <p>A simple, fast array of bits, represented compactly by an array of ints internally.</p>
  *
@@ -39,7 +41,7 @@ export default class BitArray {
    * @return Boolean true iff bit i is set
    */
   get(i) {
-    return (this.bits[i / 32] & (1 << (i & 0x1F))) != 0;
+    return (this.bits[Math.floor(i / 32)] & (1 << (i & 0x1F))) !== 0;
   }
 
   /**
@@ -48,7 +50,7 @@ export default class BitArray {
    * @param i bit to set
    */
   set(i) {
-    this.bits[i / 32] |= 1 << (i & 0x1F);
+    this.bits[Math.floor(i / 32)] |= 1 << (i & 0x1F);
   }
 
   /**
@@ -57,7 +59,7 @@ export default class BitArray {
    * @param i bit to set
    */
   flip(i) {
-    this.bits[i / 32] ^= 1 << (i & 0x1F);
+    this.bits[Math.floor(i / 32)] ^= 1 << (i & 0x1F);
   }
 
   /**
@@ -70,18 +72,18 @@ export default class BitArray {
     if (from >= this.size) {
       return this.size;
     }
-    let bitsOffset = from / 32;
-    let currentBits = bits[bitsOffset];
+    let bitsOffset = Math.floor(from / 32);
+    let currentBits = this.bits[bitsOffset];
     // mask off lesser bits first
     currentBits &= ~((1 << (from & 0x1F)) - 1);
     while (currentBits == 0) {
       if (++bitsOffset == this.bits.length) {
-        return size;
+        return this.size;
       }
       currentBits = this.bits[bitsOffset];
     }
     const result = (bitsOffset * 32) + BitArray.numberOfTrailingZeros(currentBits);
-    return result > size ? size : result;
+    return result > this.size ? this.size : result;
   }
 
   /**
@@ -91,20 +93,20 @@ export default class BitArray {
    */
   getNextUnset(from) {
     if (from >= this.size) {
-      return size;
+      return this.size;
     }
-    let bitsOffset = from / 32;
+    let bitsOffset = Math.floor(from / 32);
     let currentBits = ~this.bits[bitsOffset];
     // mask off lesser bits first
     currentBits &= ~((1 << (from & 0x1F)) - 1);
     while (currentBits == 0) {
       if (++bitsOffset == this.bits.length) {
-        return size;
+        return this.size;
       }
       currentBits = ~this.bits[bitsOffset];
     }
     const result = (bitsOffset * 32) + BitArray.numberOfTrailingZeros(currentBits);
-    return result > size ? size : result;
+    return result > this.size ? this.size : result;
   }
 
   /**
@@ -115,7 +117,7 @@ export default class BitArray {
    * corresponds to bit i, the next-least-significant to i+1, and so on.
    */
   setBulk(i, newBits) {
-    this.bits[i / 32] = newBits;
+    this.bits[Math.floor(i / 32)] = newBits;
   }
 
   /**
@@ -132,8 +134,8 @@ export default class BitArray {
       return;
     }
     end--; // will be easier to treat this as the last actually set bit -- inclusive
-    const firstInt = start / 32;
-    const lastInt = end / 32;
+    const firstInt = Math.floor(start / 32);
+    const lastInt = Math.floor(end / 32);
     for (let i = firstInt; i <= lastInt; i++) {
       const firstBit = i > firstInt ? 0 : start & 0x1F;
       const lastBit = i < lastInt ? 31 : end & 0x1F;
@@ -174,8 +176,8 @@ export default class BitArray {
       return true; // empty range matches
     }
     end--; // will be easier to treat this as the last actually set bit -- inclusive
-    const firstInt = start / 32;
-    const lastInt = end / 32;
+    const firstInt = Math.floor(start / 32);
+    const lastInt = Math.floor(end / 32);
     for (let i = firstInt; i <= lastInt; i++) {
       const firstBit = i > firstInt ? 0 : start & 0x1F;
       const lastBit = i < lastInt ? 31 : end & 0x1F;
@@ -200,7 +202,7 @@ export default class BitArray {
 
   appendBit(bit) {
     if (bit) {
-      this.bits[this.size / 32] |= 1 << (this.size & 0x1F);
+      this.bits[Math.floor(this.size / 32)] |= 1 << (this.size & 0x1F);
     }
     this.size++;
   }
@@ -215,7 +217,7 @@ export default class BitArray {
    */
   appendBits(value, numBits) {
     if (numBits < 0 || numBits > 32) {
-      throw new IllegalArgumentException("Num bits must be between 0 and 32");
+      throw new IllegalArgumentException('Num bits must be between 0 and 32');
     }
     for (let numBitsLeft = numBits; numBitsLeft > 0; numBitsLeft--) {
       this.appendBit(((value >> (numBitsLeft - 1)) & 0x01) == 1);
@@ -231,7 +233,7 @@ export default class BitArray {
 
   xor(other) {
     if (this.bits.length !== other.bits.length) {
-      throw new IllegalArgumentException("Sizes don't match"); //FIXME
+      throw new IllegalArgumentException('Sizes don\'t match');
     }
     for (let i = 0; i < this.bits.length; i++) {
       // The last byte could be incomplete (i.e. not have 8 bits in
@@ -273,9 +275,9 @@ export default class BitArray {
    * Reverses all bits in the array.
    */
   reverse() {
-    const newBits = []
+    const newBits = [];
     // reverse all int's first
-    const len = ((this.size - 1) / 32);
+    const len = Math.floor((this.size - 1) / 32);
     const oldBitsLen = len + 1;
     for (let i = 0; i < oldBitsLen; i++) {
       let x = this.bits[i];
@@ -287,7 +289,7 @@ export default class BitArray {
     }
     // now correct the int's if the bit size isn't a multiple of 32
     if (this.size !== oldBitsLen * 32) {
-      const leftOffset = oldBitsLen * 32 - size;
+      const leftOffset = oldBitsLen * 32 - this.size;
       let mask = 1;
       for (let i = 0; i < 31 - leftOffset; i++) {
         mask = (mask << 1) | 1;
@@ -308,17 +310,14 @@ export default class BitArray {
     if (!(o instanceof BitArray)) {
       return false;
     }
-    return size === o.size && Arrays.equals(bits, other.bits); // FIXME
-  }
-
-  // FIXME useful?
-  hashCode() {
-    return 31 * size + Arrays.hashCode(bits);
+    return this.size === o.size && this.bits.every(function (element, index) {
+        return element === o[index];
+      });
   }
 
   toString() {
     const result = [];
-    for (let i = 0; i < size; i++) {
+    for (let i = 0; i < this.size; i++) {
       if ((i & 0x07) == 0) {
         result.push(' ');
       }
@@ -328,7 +327,7 @@ export default class BitArray {
   }
 
   clone() {
-    return new BitArray(this.bits.slice(0), size);
+    return new BitArray(this.bits.slice(0), this.size);
   }
 
   static numberOfTrailingZeros(i) {
@@ -339,7 +338,7 @@ export default class BitArray {
     let n = 31;
     y = i << 16;
     if (y !== 0) {
-      n = n -16;
+      n = n - 16;
       i = y;
     }
     y = i << 8;

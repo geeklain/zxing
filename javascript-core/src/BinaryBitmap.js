@@ -15,8 +15,7 @@
  */
 
 
-import BitArray from './common/BitArray';
-import BitMatrix from './common/BitMatrix';
+import IllegalArgumentException from './IllegalArgumentException';
 
 /**
  * This class is the core bitmap class used by ZXing to represent 1 bit data. Reader objects
@@ -28,7 +27,7 @@ export default class BinaryBitmap {
 
   constructor(binarizer) {
     if (!binarizer) {
-      throw new IllegalArgumentException("Binarizer must be non-null.");
+      throw new IllegalArgumentException('Binarizer must be non-null.');
     }
     this.binarizer = binarizer;
     this.matrix = null;
@@ -79,7 +78,7 @@ export default class BinaryBitmap {
     //    1D Reader finds a barcode before the 2D Readers run.
     // 2. This work will only be done once even if the caller installs multiple 2D Readers.
     if (!this.matrix) {
-      this.matrix = binarizer.getBlackMatrix();
+      this.matrix = this.binarizer.getBlackMatrix();
     }
     return this.matrix;
   }
@@ -139,7 +138,7 @@ export default class BinaryBitmap {
     try {
       return this.getBlackMatrix().toString();
     } catch (e) {
-      return "";
+      return '';
     }
   }
 

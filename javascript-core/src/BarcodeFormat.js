@@ -71,5 +71,4 @@ export default {
 
   /** UPC/EAN extension format. Not a stand-alone format. */
   UPC_EAN_EXTENSION: 'UPC_EAN_EXTENSION'
-
-}
+};

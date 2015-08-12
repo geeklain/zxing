@@ -28,4 +28,9 @@ export default class FormatException extends ReaderException {
   constructor(message) {
     super(message);
   }
+
+  static getFormatInstance(message) {
+    return new FormatException(message);
+  }
+
 }
