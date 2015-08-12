@@ -14,8 +14,11 @@ module.exports = {
     loaders: [
       {
         test: /.js$/,
-        loader: 'babel-loader'
+        loader: 'babel?'
+                + 'optional[]=runtime'
+                + '&cacheDirectory=true'
       }
     ]
-  }
+  },
+  devtool: 'source-map'
 };

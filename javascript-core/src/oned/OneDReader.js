@@ -143,9 +143,6 @@ export default class OneDReader {
           }
           return result;
         } catch (e) {
-          /*eslint-disable no-console */
-          console.error(e);
-          /*eslint-enable no-console */
           // continue -- just couldn't decode this row
         }
       }
