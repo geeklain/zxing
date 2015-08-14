@@ -14,64 +14,54 @@
  * limitations under the License.
  */
 
-package com.google.zxing.oned;
+import OneDimensionalCodeWriter from './OneDimensionalCodeWriter';
+import { CODE_PATTERNS } from './Code128Reader';
+import BarcodeFormat from '../BarcodeFormat';
+import IllegalArgumentException from '../IllegalArgumentException';
 
-import com.google.zxing.BarcodeFormat;
-import com.google.zxing.EncodeHintType;
-import com.google.zxing.WriterException;
-import com.google.zxing.common.BitMatrix;
+const CODE_START_B = 104;
+const CODE_START_C = 105;
+const CODE_CODE_B = 100;
+const CODE_CODE_C = 99;
+const CODE_STOP = 106;
 
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Map;
+// Dummy characters used to specify control characters in input
+const ESCAPE_FNC_1 = '\u00f1';
+const ESCAPE_FNC_2 = '\u00f2';
+const ESCAPE_FNC_3 = '\u00f3';
+const ESCAPE_FNC_4 = '\u00f4';
+
+const CODE_FNC_1 = 102;   // Code A, Code B, Code C
+const CODE_FNC_2 = 97;    // Code A, Code B
+const CODE_FNC_3 = 96;    // Code A, Code B
+const CODE_FNC_4_B = 100; // Code B
 
 /**
  * This object renders a CODE128 code as a {@link BitMatrix}.
  * 
  * @author erik.barbara@gmail.com (Erik Barbara)
  */
-public final class Code128Writer extends OneDimensionalCodeWriter {
+export default class Code128Writer extends OneDimensionalCodeWriter {
 
-  private static final int CODE_START_B = 104;
-  private static final int CODE_START_C = 105;
-  private static final int CODE_CODE_B = 100;
-  private static final int CODE_CODE_C = 99;
-  private static final int CODE_STOP = 106;
+  encode(contents, format, width, height, hints) {
 
-  // Dummy characters used to specify control characters in input
-  private static final char ESCAPE_FNC_1 = '\u00f1';
-  private static final char ESCAPE_FNC_2 = '\u00f2';
-  private static final char ESCAPE_FNC_3 = '\u00f3';
-  private static final char ESCAPE_FNC_4 = '\u00f4';
-
-  private static final int CODE_FNC_1 = 102;   // Code A, Code B, Code C
-  private static final int CODE_FNC_2 = 97;    // Code A, Code B
-  private static final int CODE_FNC_3 = 96;    // Code A, Code B
-  private static final int CODE_FNC_4_B = 100; // Code B
-
-  @Override
-  public BitMatrix encode(String contents,
-                          BarcodeFormat format,
-                          int width,
-                          int height,
-                          Map<EncodeHintType,?> hints) throws WriterException {
-    if (format != BarcodeFormat.CODE_128) {
-      throw new IllegalArgumentException("Can only encode CODE_128, but got " + format);
+    if (format !== BarcodeFormat.CODE_128) {
+      throw new IllegalArgumentException('Can only encode CODE_128, but got ' + format);
     }
     return super.encode(contents, format, width, height, hints);
   }
 
-  @Override
-  public boolean[] encode(String contents) {
-    int length = contents.length();
+  doEncode(contents) {
+
+    const length = contents.length;
     // Check length
     if (length < 1 || length > 80) {
       throw new IllegalArgumentException(
-          "Contents length should be between 1 and 80 characters, but got " + length);
+          'Contents length should be between 1 and 80 characters, but got ' + length);
     }
     // Check content
-    for (int i = 0; i < length; i++) {
-      char c = contents.charAt(i);
+    for (let i = 0; i < length; i++) {
+      const c = contents.charAt(i);
       if (c < ' ' || c > '~') {
         switch (c) {
           case ESCAPE_FNC_1:
@@ -80,30 +70,30 @@ public final class Code128Writer extends OneDimensionalCodeWriter {
           case ESCAPE_FNC_4:
             break;
           default:
-            throw new IllegalArgumentException("Bad character in input: " + c);
+            throw new IllegalArgumentException('Bad character in input: ' + c);
         }
       }
     }
     
-    Collection<int[]> patterns = new ArrayList<>(); // temporary storage for patterns
-    int checkSum = 0;
-    int checkWeight = 1;
-    int codeSet = 0; // selected code (CODE_CODE_B or CODE_CODE_C)
-    int position = 0; // position in contents
+    const patterns = []; // temporary storage for patterns
+    let checkSum = 0;
+    let checkWeight = 1;
+    let codeSet = 0; // selected code (CODE_CODE_B or CODE_CODE_C)
+    let position = 0; // position in contents
     
     while (position < length) {
       //Select code to use
-      int requiredDigitCount = codeSet == CODE_CODE_C ? 2 : 4;
-      int newCodeSet;
-      if (isDigits(contents, position, requiredDigitCount)) {
+      const requiredDigitCount = codeSet === CODE_CODE_C ? 2 : 4;
+      let newCodeSet;
+      if (Code128Writer.isDigits(contents, position, requiredDigitCount)) {
         newCodeSet = CODE_CODE_C;
       } else {
         newCodeSet = CODE_CODE_B;
       }
       
       //Get the pattern index
-      int patternIndex;
-      if (newCodeSet == codeSet) {
+      let patternIndex;
+      if (newCodeSet === codeSet) {
         // Encode the current character
         // First handle escapes
         switch (contents.charAt(position)) {
@@ -121,10 +111,10 @@ public final class Code128Writer extends OneDimensionalCodeWriter {
             break;
           default:
             // Then handle normal characters otherwise
-            if (codeSet == CODE_CODE_B) {
-              patternIndex = contents.charAt(position) - ' ';
+            if (codeSet === CODE_CODE_B) {
+              patternIndex = contents.charCodeAt(position) - 32;
             } else { // CODE_CODE_C
-              patternIndex = Integer.parseInt(contents.substring(position, position + 2));
+              patternIndex = parseInt(contents.substring(position, position + 2));
               position++; // Also incremented below
             }
         }
@@ -132,9 +122,9 @@ public final class Code128Writer extends OneDimensionalCodeWriter {
       } else {
         // Should we change the current code?
         // Do we have a code set?
-        if (codeSet == 0) {
+        if (codeSet === 0) {
           // No, we don't have a code set
-          if (newCodeSet == CODE_CODE_B) {
+          if (newCodeSet === CODE_CODE_B) {
             patternIndex = CODE_START_B;
           } else {
             // CODE_CODE_C
@@ -148,7 +138,7 @@ public final class Code128Writer extends OneDimensionalCodeWriter {
       }
       
       // Get the pattern
-      patterns.add(Code128Reader.CODE_PATTERNS[patternIndex]);
+      patterns.push(CODE_PATTERNS[patternIndex]);
       
       // Compute checksum
       checkSum += patternIndex * checkWeight;
@@ -159,36 +149,36 @@ public final class Code128Writer extends OneDimensionalCodeWriter {
     
     // Compute and append checksum
     checkSum %= 103;
-    patterns.add(Code128Reader.CODE_PATTERNS[checkSum]);
+    patterns.push(CODE_PATTERNS[checkSum]);
     
     // Append stop code
-    patterns.add(Code128Reader.CODE_PATTERNS[CODE_STOP]);
+    patterns.push(CODE_PATTERNS[CODE_STOP]);
     
     // Compute code width
-    int codeWidth = 0;
-    for (int[] pattern : patterns) {
-      for (int width : pattern) {
+    let codeWidth = 0;
+    patterns.forEach(function(pattern) {
+      pattern.forEach(function(width) {
         codeWidth += width;
-      }
-    }
+      });
+    });
     
     // Compute result
-    boolean[] result = new boolean[codeWidth];
-    int pos = 0;
-    for (int[] pattern : patterns) {
-      pos += appendPattern(result, pos, pattern, true);
-    }
+    const result = new Array(codeWidth);
+    let pos = 0;
+    patterns.forEach(function(pattern) {
+      pos += Code128Writer.appendPattern(result, pos, pattern, true);
+    });
     
     return result;
   }
 
-  private static boolean isDigits(CharSequence value, int start, int length) {
-    int end = start + length;
-    int last = value.length();
-    for (int i = start; i < end && i < last; i++) {
-      char c = value.charAt(i);
+  static isDigits(value, start, length) {
+    let end = start + length;
+    const last = value.length;
+    for (let i = start; i < end && i < last; i++) {
+      const c = value.charAt(i);
       if (c < '0' || c > '9') {
-        if (c != ESCAPE_FNC_1) {
+        if (c !== ESCAPE_FNC_1) {
           return false;
         }
         end++; // ignore FNC_1
@@ -196,5 +186,4 @@ public final class Code128Writer extends OneDimensionalCodeWriter {
     }
     return end <= last; // end > last if we've run out of string
   }
-
 }

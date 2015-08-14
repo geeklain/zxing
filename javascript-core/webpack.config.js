@@ -26,11 +26,7 @@ module.exports = {
   },
   devtool: 'source-map',
   devServer: {
-    colors: true,
-    contentBase: "./resources",
-    //hot: true, //only works as a CLI param !?
-    port: 8181,
-    progress: true
-    //inline: true //only works as a CLI param !?
+    contentBase: './resources',
+    port: 8181
   }
 };

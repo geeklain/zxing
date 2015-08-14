@@ -23,7 +23,7 @@ import BarcodeFormat from '../BarcodeFormat';
 import ResultPoint from '../ResultPoint';
 import Result from '../Result';
 
-const CODE_PATTERNS = [
+export const CODE_PATTERNS = [
   [2, 1, 2, 2, 2, 2], // 0
   [2, 2, 2, 1, 2, 2],
   [2, 2, 2, 2, 2, 1],
@@ -497,8 +497,9 @@ export default class Code128Reader extends OneDReader {
       throw ChecksumException.getChecksumInstance();
     }
 
+    let resultStr = result.join('');
     // Need to pull out the check digits from string
-    const resultLength = result.length;
+    const resultLength = resultStr.length;
     if (resultLength == 0) {
       // false positive
       throw NotFoundException.getNotFoundInstance();
@@ -506,15 +507,20 @@ export default class Code128Reader extends OneDReader {
 
     // Only bother if the result had at least one character, and if the checksum digit happened to
     // be a printable character. If it was just interpreted as a control code, nothing to remove.
+
     if (resultLength > 0 && lastCharacterWasPrintable) {
-      result.splice(resultLength - 1, 1);
+      if (codeSet === CODE_CODE_C) {
+        resultStr = resultStr.substring(0, resultLength - 2);
+      } else {
+        resultStr = resultStr.substring(0, resultLength - 1);
+      }
     }
 
     const left = (startPatternInfo[1] + startPatternInfo[0]) / 2.0;
     const right = lastStart + lastPatternSize / 2.0;
 
     return new Result(
-      result.join(''),
+      resultStr,
       rawCodes,
       [
         new ResultPoint(left, rowNumber),
