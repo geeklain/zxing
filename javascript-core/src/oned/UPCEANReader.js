@@ -14,22 +14,71 @@
  * limitations under the License.
  */
 
-package com.google.zxing.oned;
+import EANManufacturerOrgSupport from './EANManufacturerOrgSupport';
+import OneDReader from './OneDReader';
+import UPCEANExtensionSupport from './UPCEANExtensionSupport';
 
-import com.google.zxing.BarcodeFormat;
-import com.google.zxing.ChecksumException;
-import com.google.zxing.DecodeHintType;
-import com.google.zxing.FormatException;
-import com.google.zxing.NotFoundException;
-import com.google.zxing.ReaderException;
-import com.google.zxing.Result;
-import com.google.zxing.ResultMetadataType;
-import com.google.zxing.ResultPoint;
-import com.google.zxing.ResultPointCallback;
-import com.google.zxing.common.BitArray;
+import BarcodeFormat from '../BarcodeFormat';
+import DecodeHintType from '../DecodeHintType';
+import Result from '../Result';
+import ResultMetadataType from '../ResultMetadataType';
+import ResultPoint from '../ResultPoint';
 
-import java.util.Arrays;
-import java.util.Map;
+import ChecksumException from '../ChecksumException';
+import FormatException from '../FormatException';
+import NotFoundException from '../NotFoundException';
+
+
+// These two values are critical for determining how permissive the decoding will be.
+// We've arrived at these values through a lot of trial and error. Setting them any higher
+// lets false positives creep in quickly.
+const MAX_AVG_VARIANCE = 0.48;
+const MAX_INDIVIDUAL_VARIANCE = 0.7;
+
+/**
+ * Start/end guard pattern.
+ */
+export const START_END_PATTERN = Object.freeze([1, 1, 1]);
+
+/**
+ * Pattern marking the middle of a UPC/EAN pattern, separating the two halves.
+ */
+export const MIDDLE_PATTERN = Object.freeze([1, 1, 1, 1, 1]);
+
+/**
+ * "Odd", or "L" patterns used to encode UPC/EAN digits.
+ */
+export const L_PATTERNS = Object.freeze([
+  Object.freeze([3, 2, 1, 1]), // 0
+  Object.freeze([2, 2, 2, 1]), // 1
+  Object.freeze([2, 1, 2, 2]), // 2
+  Object.freeze([1, 4, 1, 1]), // 3
+  Object.freeze([1, 1, 3, 2]), // 4
+  Object.freeze([1, 2, 3, 1]), // 5
+  Object.freeze([1, 1, 1, 4]), // 6
+  Object.freeze([1, 3, 1, 2]), // 7
+  Object.freeze([1, 2, 1, 3]), // 8
+  Object.freeze([3, 1, 1, 2]) // 9
+]);
+
+/**
+ * As above but also including the "even", or "G" patterns used to encode UPC/EAN digits.
+ */
+export const L_AND_G_PATTERNS = Object.freeze((function () {
+  const arr = L_PATTERNS.slice(0);
+
+  for (let i = 10; i < 20; i++) {
+    const widths = L_PATTERNS[i - 10];
+    const reversedWidths = new Array(widths.length);
+    for (let j = 0; j < widths.length; j++) {
+      reversedWidths[j] = widths[widths.length - j - 1];
+    }
+    arr[i] = Object.freeze(reversedWidths);
+  }
+
+  return arr;
+})());
+
 
 /**
  * <p>Encapsulates functionality and implementation that is common to UPC and EAN families
@@ -39,93 +88,33 @@ import java.util.Map;
  * @author Sean Owen
  * @author alasdair@google.com (Alasdair Mackintosh)
  */
-public abstract class UPCEANReader extends OneDReader {
+export default class UPCEANReader extends OneDReader {
 
-  // These two values are critical for determining how permissive the decoding will be.
-  // We've arrived at these values through a lot of trial and error. Setting them any higher
-  // lets false positives creep in quickly.
-  private static final float MAX_AVG_VARIANCE = 0.48f;
-  private static final float MAX_INDIVIDUAL_VARIANCE = 0.7f;
-
-  /**
-   * Start/end guard pattern.
-   */
-  static final int[] START_END_PATTERN = {1, 1, 1,};
-
-  /**
-   * Pattern marking the middle of a UPC/EAN pattern, separating the two halves.
-   */
-  static final int[] MIDDLE_PATTERN = {1, 1, 1, 1, 1};
-
-  /**
-   * "Odd", or "L" patterns used to encode UPC/EAN digits.
-   */
-  static final int[][] L_PATTERNS = {
-      {3, 2, 1, 1}, // 0
-      {2, 2, 2, 1}, // 1
-      {2, 1, 2, 2}, // 2
-      {1, 4, 1, 1}, // 3
-      {1, 1, 3, 2}, // 4
-      {1, 2, 3, 1}, // 5
-      {1, 1, 1, 4}, // 6
-      {1, 3, 1, 2}, // 7
-      {1, 2, 1, 3}, // 8
-      {3, 1, 1, 2}  // 9
-  };
-
-  /**
-   * As above but also including the "even", or "G" patterns used to encode UPC/EAN digits.
-   */
-  static final int[][] L_AND_G_PATTERNS;
-
-  static {
-    L_AND_G_PATTERNS = new int[20][];
-    System.arraycopy(L_PATTERNS, 0, L_AND_G_PATTERNS, 0, 10);
-    for (int i = 10; i < 20; i++) {
-      int[] widths = L_PATTERNS[i - 10];
-      int[] reversedWidths = new int[widths.length];
-      for (int j = 0; j < widths.length; j++) {
-        reversedWidths[j] = widths[widths.length - j - 1];
-      }
-      L_AND_G_PATTERNS[i] = reversedWidths;
-    }
+  constructor() {
+    super();
+    this.extensionReader = new UPCEANExtensionSupport();
+    this.eanManSupport = new EANManufacturerOrgSupport();
   }
 
-  private final StringBuilder decodeRowStringBuffer;
-  private final UPCEANExtensionSupport extensionReader;
-  private final EANManufacturerOrgSupport eanManSupport;
-
-  protected UPCEANReader() {
-    decodeRowStringBuffer = new StringBuilder(20);
-    extensionReader = new UPCEANExtensionSupport();
-    eanManSupport = new EANManufacturerOrgSupport();
-  }
-
-  static int[] findStartGuardPattern(BitArray row) throws NotFoundException {
-    boolean foundStart = false;
-    int[] startRange = null;
-    int nextStart = 0;
-    int[] counters = new int[START_END_PATTERN.length];
+  static findStartGuardPattern(row) {
+    let foundStart = false;
+    let startRange = null;
+    let nextStart = 0;
+    let counters = new Int32Array(START_END_PATTERN.length);
     while (!foundStart) {
-      Arrays.fill(counters, 0, START_END_PATTERN.length, 0);
-      startRange = findGuardPattern(row, nextStart, false, START_END_PATTERN, counters);
-      int start = startRange[0];
+      counters.fill(0);
+      startRange = UPCEANReader.findGuardPattern(row, nextStart, false, START_END_PATTERN, counters);
+      const start = startRange[0];
       nextStart = startRange[1];
       // Make sure there is a quiet zone at least as big as the start pattern before the barcode.
       // If this check would run off the left edge of the image, do not accept this barcode,
       // as it is very likely to be a false positive.
-      int quietStart = start - (nextStart - start);
+      const quietStart = start - (nextStart - start);
       if (quietStart >= 0) {
         foundStart = row.isRange(quietStart, start, false);
       }
     }
     return startRange;
-  }
-
-  @Override
-  public Result decodeRow(int rowNumber, BitArray row, Map<DecodeHintType,?> hints)
-      throws NotFoundException, ChecksumException, FormatException {
-    return decodeRow(rowNumber, row, findStartGuardPattern(row), hints);
   }
 
   /**
@@ -142,97 +131,91 @@ public abstract class UPCEANReader extends OneDReader {
    * @throws ChecksumException if a potential barcode is found but does not pass its checksum
    * @throws FormatException if a potential barcode is found but format is invalid
    */
-  public Result decodeRow(int rowNumber,
-                          BitArray row,
-                          int[] startGuardRange,
-                          Map<DecodeHintType,?> hints)
-      throws NotFoundException, ChecksumException, FormatException {
+  decodeRow(rowNumber, row, hints, startGuardRange = UPCEANReader.findStartGuardPattern(row)) {
 
-    ResultPointCallback resultPointCallback = hints == null ? null :
-        (ResultPointCallback) hints.get(DecodeHintType.NEED_RESULT_POINT_CALLBACK);
+    const resultPointCallback = !hints ? null : hints[DecodeHintType.NEED_RESULT_POINT_CALLBACK];
 
-    if (resultPointCallback != null) {
+    if (resultPointCallback) {
       resultPointCallback.foundPossibleResultPoint(new ResultPoint(
-          (startGuardRange[0] + startGuardRange[1]) / 2.0f, rowNumber
+        (startGuardRange[0] + startGuardRange[1]) / 2.0, rowNumber
       ));
     }
 
-    StringBuilder result = decodeRowStringBuffer;
-    result.setLength(0);
-    int endStart = decodeMiddle(row, startGuardRange, result);
+    const result = new Array(20);
+    const endStart = this.decodeMiddle(row, startGuardRange, result);
 
-    if (resultPointCallback != null) {
+    if (resultPointCallback) {
       resultPointCallback.foundPossibleResultPoint(new ResultPoint(
-          endStart, rowNumber
+        endStart, rowNumber
       ));
     }
 
-    int[] endRange = decodeEnd(row, endStart);
+    const endRange = this.decodeEnd(row, endStart);
 
-    if (resultPointCallback != null) {
+    if (resultPointCallback) {
       resultPointCallback.foundPossibleResultPoint(new ResultPoint(
-          (endRange[0] + endRange[1]) / 2.0f, rowNumber
+        (endRange[0] + endRange[1]) / 2.0, rowNumber
       ));
     }
-
 
     // Make sure there is a quiet zone at least as big as the end pattern after the barcode. The
     // spec might want more whitespace, but in practice this is the maximum we can count on.
-    int end = endRange[1];
-    int quietEnd = end + (end - endRange[0]);
+    const end = endRange[1];
+    const quietEnd = end + (end - endRange[0]);
     if (quietEnd >= row.getSize() || !row.isRange(end, quietEnd, false)) {
       throw NotFoundException.getNotFoundInstance();
     }
 
-    String resultString = result.toString();
+    const resultString = result.join('');
     // UPC/EAN should never be less than 8 chars anyway
-    if (resultString.length() < 8) {
+    if (resultString.length < 8) {
       throw FormatException.getFormatInstance();
     }
-    if (!checkChecksum(resultString)) {
+    if (!this.checkChecksum(resultString)) {
       throw ChecksumException.getChecksumInstance();
     }
 
-    float left = (float) (startGuardRange[1] + startGuardRange[0]) / 2.0f;
-    float right = (float) (endRange[1] + endRange[0]) / 2.0f;
-    BarcodeFormat format = getBarcodeFormat();
-    Result decodeResult = new Result(resultString,
-        null, // no natural byte representation for these barcodes
-        new ResultPoint[]{
-            new ResultPoint(left, (float) rowNumber),
-            new ResultPoint(right, (float) rowNumber)},
-        format);
+    const left = (startGuardRange[1] + startGuardRange[0]) / 2.0;
+    const right = (endRange[1] + endRange[0]) / 2.0;
+    const format = this.getBarcodeFormat();
+    const decodeResult = new Result(resultString,
+      null, // no natural byte representation for these barcodes
+      [
+        new ResultPoint(left, rowNumber),
+        new ResultPoint(right, rowNumber)
+      ],
+      format);
 
-    int extensionLength = 0;
+    let extensionLength = 0;
 
     try {
-      Result extensionResult = extensionReader.decodeRow(rowNumber, row, endRange[1]);
+      const extensionResult = this.extensionReader.decodeRow(rowNumber, row, endRange[1]);
       decodeResult.putMetadata(ResultMetadataType.UPC_EAN_EXTENSION, extensionResult.getText());
       decodeResult.putAllMetadata(extensionResult.getResultMetadata());
       decodeResult.addResultPoints(extensionResult.getResultPoints());
-      extensionLength = extensionResult.getText().length();
-    } catch (ReaderException re) {
+      extensionLength = extensionResult.getText().length;
+    }
+    catch (e) {
       // continue
     }
 
-    int[] allowedExtensions =
-        hints == null ? null : (int[]) hints.get(DecodeHintType.ALLOWED_EAN_EXTENSIONS);
-    if (allowedExtensions != null) {
-      boolean valid = false;
-      for (int length : allowedExtensions) {
-        if (extensionLength == length) {
+    const allowedExtensions = !hints ? null : hints[DecodeHintType.ALLOWED_EAN_EXTENSIONS];
+    if (allowedExtensions) {
+      let valid = false;
+      allowedExtensions.some(function (length) {
+        if (extensionLength === length) {
           valid = true;
-          break;
+          return true;
         }
-      }
+      });
       if (!valid) {
         throw NotFoundException.getNotFoundInstance();
       }
     }
 
-    if (format == BarcodeFormat.EAN_13 || format == BarcodeFormat.UPC_A) {
-      String countryID = eanManSupport.lookupCountryIdentifier(resultString);
-      if (countryID != null) {
+    if (format === BarcodeFormat.EAN_13 || format === BarcodeFormat.UPC_A) {
+      const countryID = this.eanManSupport.lookupCountryIdentifier(resultString);
+      if (countryID) {
         decodeResult.putMetadata(ResultMetadataType.POSSIBLE_COUNTRY, countryID);
       }
     }
@@ -245,8 +228,8 @@ public abstract class UPCEANReader extends OneDReader {
    * @return {@link #checkStandardUPCEANChecksum(CharSequence)}
    * @throws FormatException if the string does not contain only digits
    */
-  boolean checkChecksum(String s) throws FormatException {
-    return checkStandardUPCEANChecksum(s);
+  checkChecksum(s) {
+    return UPCEANReader.checkStandardUPCEANChecksum(s);
   }
 
   /**
@@ -257,40 +240,33 @@ public abstract class UPCEANReader extends OneDReader {
    * @return true iff string of digits passes the UPC/EAN checksum algorithm
    * @throws FormatException if the string does not contain only digits
    */
-  static boolean checkStandardUPCEANChecksum(CharSequence s) throws FormatException {
-    int length = s.length();
-    if (length == 0) {
+  static checkStandardUPCEANChecksum(s) {
+    const length = s.length;
+    if (length === 0) {
       return false;
     }
 
-    int sum = 0;
-    for (int i = length - 2; i >= 0; i -= 2) {
-      int digit = (int) s.charAt(i) - (int) '0';
+    let sum = 0;
+    for (let i = length - 2; i >= 0; i -= 2) {
+      const digit = parseInt(s.charAt(i));
       if (digit < 0 || digit > 9) {
         throw FormatException.getFormatInstance();
       }
       sum += digit;
     }
     sum *= 3;
-    for (int i = length - 1; i >= 0; i -= 2) {
-      int digit = (int) s.charAt(i) - (int) '0';
+    for (let i = length - 1; i >= 0; i -= 2) {
+      const digit = parseInt(s.charAt(i));
       if (digit < 0 || digit > 9) {
         throw FormatException.getFormatInstance();
       }
       sum += digit;
     }
-    return sum % 10 == 0;
+    return sum % 10 === 0;
   }
 
-  int[] decodeEnd(BitArray row, int endStart) throws NotFoundException {
-    return findGuardPattern(row, endStart, false, START_END_PATTERN);
-  }
-
-  static int[] findGuardPattern(BitArray row,
-                                int rowOffset,
-                                boolean whiteFirst,
-                                int[] pattern) throws NotFoundException {
-    return findGuardPattern(row, rowOffset, whiteFirst, pattern, new int[pattern.length]);
+  decodeEnd(row, endStart) {
+    return UPCEANReader.findGuardPattern(row, endStart, false, START_END_PATTERN);
   }
 
   /**
@@ -304,31 +280,32 @@ public abstract class UPCEANReader extends OneDReader {
    * @return start/end horizontal offset of guard pattern, as an array of two ints
    * @throws NotFoundException if pattern is not found
    */
-  private static int[] findGuardPattern(BitArray row,
-                                        int rowOffset,
-                                        boolean whiteFirst,
-                                        int[] pattern,
-                                        int[] counters) throws NotFoundException {
-    int patternLength = pattern.length;
-    int width = row.getSize();
-    boolean isWhite = whiteFirst;
+  static findGuardPattern(row, rowOffset, whiteFirst, pattern, counters = new Int32Array(pattern.length)) {
+
+    const patternLength = pattern.length;
+    const width = row.getSize();
+    let isWhite = whiteFirst;
     rowOffset = whiteFirst ? row.getNextUnset(rowOffset) : row.getNextSet(rowOffset);
-    int counterPosition = 0;
-    int patternStart = rowOffset;
-    for (int x = rowOffset; x < width; x++) {
+    let counterPosition = 0;
+    let patternStart = rowOffset;
+    for (let x = rowOffset; x < width; x++) {
       if (row.get(x) ^ isWhite) {
         counters[counterPosition]++;
-      } else {
-        if (counterPosition == patternLength - 1) {
-          if (patternMatchVariance(counters, pattern, MAX_INDIVIDUAL_VARIANCE) < MAX_AVG_VARIANCE) {
-            return new int[]{patternStart, x};
+      }
+      else {
+        if (counterPosition === patternLength - 1) {
+          if (UPCEANReader.patternMatchVariance(counters, pattern, MAX_INDIVIDUAL_VARIANCE) < MAX_AVG_VARIANCE) {
+            return [patternStart, x];
           }
           patternStart += counters[0] + counters[1];
-          System.arraycopy(counters, 2, counters, 0, patternLength - 2);
+          for (let i = 0; i < patternLength - 2; i++) {
+            counters[i] = counters[i + 2];
+          }
           counters[patternLength - 2] = 0;
           counters[patternLength - 1] = 0;
           counterPosition--;
-        } else {
+        }
+        else {
           counterPosition++;
         }
         counters[counterPosition] = 1;
@@ -350,15 +327,15 @@ public abstract class UPCEANReader extends OneDReader {
    * @return horizontal offset of first pixel beyond the decoded digit
    * @throws NotFoundException if digit cannot be decoded
    */
-  static int decodeDigit(BitArray row, int[] counters, int rowOffset, int[][] patterns)
-      throws NotFoundException {
-    recordPattern(row, rowOffset, counters);
-    float bestVariance = MAX_AVG_VARIANCE; // worst variance we'll accept
-    int bestMatch = -1;
-    int max = patterns.length;
-    for (int i = 0; i < max; i++) {
-      int[] pattern = patterns[i];
-      float variance = patternMatchVariance(counters, pattern, MAX_INDIVIDUAL_VARIANCE);
+  static decodeDigit(row, counters, rowOffset, patterns) {
+
+    UPCEANReader.recordPattern(row, rowOffset, counters);
+    let bestVariance = MAX_AVG_VARIANCE; // worst variance we'll accept
+    let bestMatch = -1;
+    const max = patterns.length;
+    for (let i = 0; i < max; i++) {
+      const pattern = patterns[i];
+      const variance = UPCEANReader.patternMatchVariance(counters, pattern, MAX_INDIVIDUAL_VARIANCE);
       if (variance < bestVariance) {
         bestVariance = variance;
         bestMatch = i;
@@ -366,30 +343,9 @@ public abstract class UPCEANReader extends OneDReader {
     }
     if (bestMatch >= 0) {
       return bestMatch;
-    } else {
+    }
+    else {
       throw NotFoundException.getNotFoundInstance();
     }
   }
-
-  /**
-   * Get the format of this decoder.
-   *
-   * @return The 1D format.
-   */
-  abstract BarcodeFormat getBarcodeFormat();
-
-  /**
-   * Subclasses override this to decode the portion of a barcode between the start
-   * and end guard patterns.
-   *
-   * @param row row of black/white values to search
-   * @param startRange start/end offset of start guard pattern
-   * @param resultString {@link StringBuilder} to append decoded chars to
-   * @return horizontal offset of first pixel after the "middle" that was decoded
-   * @throws NotFoundException if decoding could not complete successfully
-   */
-  protected abstract int decodeMiddle(BitArray row,
-                                      int[] startRange,
-                                      StringBuilder resultString) throws NotFoundException;
-
 }

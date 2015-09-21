@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.google.zxing.common;
+import IllegalArgumentException from '../IllegalArgumentException';
 
 /**
  * <p>This provides an easy abstraction to read bits at a time from a sequence of bytes, where the
@@ -25,32 +25,30 @@ package com.google.zxing.common;
  *
  * @author Sean Owen
  */
-public final class BitSource {
-
-  private final byte[] bytes;
-  private int byteOffset;
-  private int bitOffset;
+export default class BitSource {
 
   /**
    * @param bytes bytes from which this will read bits. Bits will be read from the first byte first.
    * Bits are read within a byte from most-significant to least-significant bit.
    */
-  public BitSource(byte[] bytes) {
+  constructor(bytes) {
     this.bytes = bytes;
+    this.byteOffset = 0;
+    this.bitOffset = 0;
   }
 
   /**
    * @return index of next bit in current byte which would be read by the next call to {@link #readBits(int)}.
    */
-  public int getBitOffset() {
-    return bitOffset;
+  getBitOffset() {
+    return this.bitOffset;
   }
 
   /**
    * @return index of next byte in input byte array which would be read by the next call to {@link #readBits(int)}.
    */
-  public int getByteOffset() {
-    return byteOffset;
+  getByteOffset() {
+    return this.byteOffset;
   }
 
   /**
@@ -59,42 +57,42 @@ public final class BitSource {
    *         bits of the int
    * @throws IllegalArgumentException if numBits isn't in [1,32] or more than is available
    */
-  public int readBits(int numBits) {
-    if (numBits < 1 || numBits > 32 || numBits > available()) {
-      throw new IllegalArgumentException(String.valueOf(numBits));
+  readBits(numBits) {
+    if (numBits < 1 || numBits > 32 || numBits > this.available()) {
+      throw new IllegalArgumentException(numBits);
     }
 
-    int result = 0;
+    let result = 0;
 
     // First, read remainder from current byte
-    if (bitOffset > 0) {
-      int bitsLeft = 8 - bitOffset;
-      int toRead = numBits < bitsLeft ? numBits : bitsLeft;
-      int bitsToNotRead = bitsLeft - toRead;
-      int mask = (0xFF >> (8 - toRead)) << bitsToNotRead;
-      result = (bytes[byteOffset] & mask) >> bitsToNotRead;
+    if (this.bitOffset > 0) {
+      const bitsLeft = 8 - this.bitOffset;
+      const toRead = numBits < bitsLeft ? numBits : bitsLeft;
+      const bitsToNotRead = bitsLeft - toRead;
+      const mask = (0xFF >> (8 - toRead)) << bitsToNotRead;
+      result = (this.bytes[this.byteOffset] & mask) >> bitsToNotRead;
       numBits -= toRead;
-      bitOffset += toRead;
-      if (bitOffset == 8) {
-        bitOffset = 0;
-        byteOffset++;
+      this.bitOffset += toRead;
+      if (this.bitOffset === 8) {
+        this.bitOffset = 0;
+        this.byteOffset++;
       }
     }
 
     // Next read whole bytes
     if (numBits > 0) {
       while (numBits >= 8) {
-        result = (result << 8) | (bytes[byteOffset] & 0xFF);
-        byteOffset++;
+        result = (result << 8) | (this.bytes[this.byteOffset] & 0xFF);
+        this.byteOffset++;
         numBits -= 8;
       }
 
       // Finally read a partial byte
       if (numBits > 0) {
-        int bitsToNotRead = 8 - numBits;
-        int mask = (0xFF >> bitsToNotRead) << bitsToNotRead;
-        result = (result << numBits) | ((bytes[byteOffset] & mask) >> bitsToNotRead);
-        bitOffset += numBits;
+        const bitsToNotRead = 8 - numBits;
+        const mask = (0xFF >> bitsToNotRead) << bitsToNotRead;
+        result = (result << numBits) | ((this.bytes[this.byteOffset] & mask) >> bitsToNotRead);
+        this.bitOffset += numBits;
       }
     }
 
@@ -104,8 +102,8 @@ public final class BitSource {
   /**
    * @return number of bits that can be read successfully
    */
-  public int available() {
-    return 8 * (bytes.length - byteOffset) - bitOffset;
+  available() {
+    return 8 * (this.bytes.length - this.byteOffset) - this.bitOffset;
   }
 
 }

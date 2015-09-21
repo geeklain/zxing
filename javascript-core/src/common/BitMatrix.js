@@ -35,7 +35,7 @@ import IllegalArgumentException from '../IllegalArgumentException';
 
 export default class BitMatrix {
 
-  constructor(width, height = width, rowSize = Math.floor((width + 31) / 32), bits = []) {
+  constructor(width, height = width, rowSize = Math.floor((width + 31) / 32), bits = new Uint32Array(rowSize * height)) {
 
     if (!width || width < 1) {
       throw new IllegalArgumentException('The width must be greater than 0');
@@ -319,7 +319,7 @@ export default class BitMatrix {
     if (bitsOffset === this.bits.length) {
       return null;
     }
-    const y = bitsOffset / this.rowSize;
+    const y = Math.floor(bitsOffset / this.rowSize);
     let x = (bitsOffset % this.rowSize) * 32;
 
     const theBits = this.bits[bitsOffset];

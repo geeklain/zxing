@@ -14,41 +14,34 @@
  * limitations under the License.
  */
 
-package com.google.zxing.qrcode;
+import Decoder from './decoder/Decoder';
+import QRCodeDecoderMetaData from './decoder/QRCodeDecoderMetaData';
+import Detector from './detector/Detector';
 
-import com.google.zxing.BarcodeFormat;
-import com.google.zxing.BinaryBitmap;
-import com.google.zxing.ChecksumException;
-import com.google.zxing.DecodeHintType;
-import com.google.zxing.FormatException;
-import com.google.zxing.NotFoundException;
-import com.google.zxing.Reader;
-import com.google.zxing.Result;
-import com.google.zxing.ResultMetadataType;
-import com.google.zxing.ResultPoint;
-import com.google.zxing.common.BitMatrix;
-import com.google.zxing.common.DecoderResult;
-import com.google.zxing.common.DetectorResult;
-import com.google.zxing.qrcode.decoder.Decoder;
-import com.google.zxing.qrcode.decoder.QRCodeDecoderMetaData;
-import com.google.zxing.qrcode.detector.Detector;
+import BarcodeFormat from '../BarcodeFormat';
+import DecodeHintType from '../DecodeHintType';
+import Result from '../Result';
+import ResultMetadataType from '../ResultMetadataType';
+import NotFoundException from '../NotFoundException';
 
-import java.util.List;
-import java.util.Map;
+import BitMatrix from '../common/BitMatrix';
+
+
+const NO_POINTS = [];
 
 /**
  * This implementation can detect and decode QR Codes in an image.
  *
  * @author Sean Owen
  */
-public class QRCodeReader implements Reader {
+export default class QRCodeReader {
 
-  private static final ResultPoint[] NO_POINTS = new ResultPoint[0];
+  constructor() {
+    this.decoder = new Decoder();
+  }
 
-  private final Decoder decoder = new Decoder();
-
-  protected final Decoder getDecoder() {
-    return decoder;
+  getDecoder() {
+    return this.decoder;
   }
 
   /**
@@ -59,51 +52,44 @@ public class QRCodeReader implements Reader {
    * @throws FormatException if a QR code cannot be decoded
    * @throws ChecksumException if error correction fails
    */
-  @Override
-  public Result decode(BinaryBitmap image) throws NotFoundException, ChecksumException, FormatException {
-    return decode(image, null);
-  }
-
-  @Override
-  public final Result decode(BinaryBitmap image, Map<DecodeHintType,?> hints)
-      throws NotFoundException, ChecksumException, FormatException {
-    DecoderResult decoderResult;
-    ResultPoint[] points;
-    if (hints != null && hints.containsKey(DecodeHintType.PURE_BARCODE)) {
-      BitMatrix bits = extractPureBits(image.getBlackMatrix());
-      decoderResult = decoder.decode(bits, hints);
+  decode(image, hints) {
+    let decoderResult;
+    let points;
+    if (hints && hints[DecodeHintType.PURE_BARCODE]) {
+      const bits = QRCodeReader.extractPureBits(image.getBlackMatrix());
+      decoderResult = this.decoder.decode(bits, hints);
       points = NO_POINTS;
-    } else {
-      DetectorResult detectorResult = new Detector(image.getBlackMatrix()).detect(hints);
-      decoderResult = decoder.decode(detectorResult.getBits(), hints);
+    }
+    else {
+      const detectorResult = new Detector(image.getBlackMatrix()).detect(hints);
+      decoderResult = this.decoder.decode(detectorResult.getBits(), hints);
       points = detectorResult.getPoints();
     }
 
     // If the code was mirrored: swap the bottom-left and the top-right points.
     if (decoderResult.getOther() instanceof QRCodeDecoderMetaData) {
-      ((QRCodeDecoderMetaData) decoderResult.getOther()).applyMirroredCorrection(points);
+      decoderResult.getOther().applyMirroredCorrection(points);
     }
 
-    Result result = new Result(decoderResult.getText(), decoderResult.getRawBytes(), points, BarcodeFormat.QR_CODE);
-    List<byte[]> byteSegments = decoderResult.getByteSegments();
-    if (byteSegments != null) {
+    const result = new Result(decoderResult.getText(), decoderResult.getRawBytes(), points, BarcodeFormat.QR_CODE);
+    const byteSegments = decoderResult.getByteSegments();
+    if (byteSegments) {
       result.putMetadata(ResultMetadataType.BYTE_SEGMENTS, byteSegments);
     }
-    String ecLevel = decoderResult.getECLevel();
-    if (ecLevel != null) {
+    const ecLevel = decoderResult.getECLevel();
+    if (ecLevel) {
       result.putMetadata(ResultMetadataType.ERROR_CORRECTION_LEVEL, ecLevel);
     }
     if (decoderResult.hasStructuredAppend()) {
       result.putMetadata(ResultMetadataType.STRUCTURED_APPEND_SEQUENCE,
-                         decoderResult.getStructuredAppendSequenceNumber());
+        decoderResult.getStructuredAppendSequenceNumber());
       result.putMetadata(ResultMetadataType.STRUCTURED_APPEND_PARITY,
-                         decoderResult.getStructuredAppendParity());
+        decoderResult.getStructuredAppendParity());
     }
     return result;
   }
 
-  @Override
-  public void reset() {
+  reset() {
     // do nothing
   }
 
@@ -115,38 +101,38 @@ public class QRCodeReader implements Reader {
    *
    * @see com.google.zxing.datamatrix.DataMatrixReader#extractPureBits(BitMatrix)
    */
-  private static BitMatrix extractPureBits(BitMatrix image) throws NotFoundException {
+  static extractPureBits(image) {
 
-    int[] leftTopBlack = image.getTopLeftOnBit();
-    int[] rightBottomBlack = image.getBottomRightOnBit();
-    if (leftTopBlack == null || rightBottomBlack == null) {
+    const leftTopBlack = image.getTopLeftOnBit();
+    const rightBottomBlack = image.getBottomRightOnBit();
+    if (!leftTopBlack || !rightBottomBlack) {
       throw NotFoundException.getNotFoundInstance();
     }
 
-    float moduleSize = moduleSize(leftTopBlack, image);
+    const moduleSize = QRCodeReader.moduleSize(leftTopBlack, image);
 
-    int top = leftTopBlack[1];
-    int bottom = rightBottomBlack[1];
-    int left = leftTopBlack[0];
-    int right = rightBottomBlack[0];
-    
+    let top = leftTopBlack[1];
+    let bottom = rightBottomBlack[1];
+    let left = leftTopBlack[0];
+    let right = rightBottomBlack[0];
+
     // Sanity check!
     if (left >= right || top >= bottom) {
       throw NotFoundException.getNotFoundInstance();
     }
 
-    if (bottom - top != right - left) {
+    if (bottom - top !== right - left) {
       // Special case, where bottom-right module wasn't black so we found something else in the last row
       // Assume it's a square, so use height as the width
       right = left + (bottom - top);
     }
 
-    int matrixWidth = Math.round((right - left + 1) / moduleSize);
-    int matrixHeight = Math.round((bottom - top + 1) / moduleSize);
+    const matrixWidth = Math.round((right - left + 1) / moduleSize);
+    const matrixHeight = Math.round((bottom - top + 1) / moduleSize);
     if (matrixWidth <= 0 || matrixHeight <= 0) {
       throw NotFoundException.getNotFoundInstance();
     }
-    if (matrixHeight != matrixWidth) {
+    if (matrixHeight !== matrixWidth) {
       // Only possibly decode square regions
       throw NotFoundException.getNotFoundInstance();
     }
@@ -154,14 +140,14 @@ public class QRCodeReader implements Reader {
     // Push in the "border" by half the module width so that we start
     // sampling in the middle of the module. Just in case the image is a
     // little off, this will help recover.
-    int nudge = (int) (moduleSize / 2.0f);
+    const nudge = Math.floor(moduleSize / 2.0);
     top += nudge;
     left += nudge;
-    
+
     // But careful that this does not sample off the edge
     // "right" is the farthest-right valid pixel location -- right+1 is not necessarily
     // This is positive by how much the inner x loop below would be too large
-    int nudgedTooFarRight = left + (int) ((matrixWidth - 1) * moduleSize) - right;
+    const nudgedTooFarRight = left + Math.floor((matrixWidth - 1) * moduleSize) - right;
     if (nudgedTooFarRight > 0) {
       if (nudgedTooFarRight > nudge) {
         // Neither way fits; abort
@@ -170,7 +156,7 @@ public class QRCodeReader implements Reader {
       left -= nudgedTooFarRight;
     }
     // See logic above
-    int nudgedTooFarDown = top + (int) ((matrixHeight - 1) * moduleSize) - bottom;
+    const nudgedTooFarDown = top + Math.floor((matrixHeight - 1) * moduleSize) - bottom;
     if (nudgedTooFarDown > 0) {
       if (nudgedTooFarDown > nudge) {
         // Neither way fits; abort
@@ -180,11 +166,11 @@ public class QRCodeReader implements Reader {
     }
 
     // Now just read off the bits
-    BitMatrix bits = new BitMatrix(matrixWidth, matrixHeight);
-    for (int y = 0; y < matrixHeight; y++) {
-      int iOffset = top + (int) (y * moduleSize);
-      for (int x = 0; x < matrixWidth; x++) {
-        if (image.get(left + (int) (x * moduleSize), iOffset)) {
+    const bits = new BitMatrix(matrixWidth, matrixHeight);
+    for (let y = 0; y < matrixHeight; y++) {
+      const iOffset = top + Math.floor(y * moduleSize);
+      for (let x = 0; x < matrixWidth; x++) {
+        if (image.get(left + Math.floor(x * moduleSize), iOffset)) {
           bits.set(x, y);
         }
       }
@@ -192,16 +178,16 @@ public class QRCodeReader implements Reader {
     return bits;
   }
 
-  private static float moduleSize(int[] leftTopBlack, BitMatrix image) throws NotFoundException {
-    int height = image.getHeight();
-    int width = image.getWidth();
-    int x = leftTopBlack[0];
-    int y = leftTopBlack[1];
-    boolean inBlack = true;
-    int transitions = 0;
+  static moduleSize(leftTopBlack, image) {
+    const height = image.getHeight();
+    const width = image.getWidth();
+    let x = leftTopBlack[0];
+    let y = leftTopBlack[1];
+    let inBlack = true;
+    let transitions = 0;
     while (x < width && y < height) {
-      if (inBlack != image.get(x, y)) {
-        if (++transitions == 5) {
+      if (inBlack !== image.get(x, y)) {
+        if (++transitions === 5) {
           break;
         }
         inBlack = !inBlack;
@@ -209,10 +195,10 @@ public class QRCodeReader implements Reader {
       x++;
       y++;
     }
-    if (x == width || y == height) {
+    if (x === width || y === height) {
       throw NotFoundException.getNotFoundInstance();
     }
-    return (x - leftTopBlack[0]) / 7.0f;
+    return (x - leftTopBlack[0]) / 7.0;
   }
 
 }

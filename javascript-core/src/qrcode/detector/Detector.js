@@ -14,21 +14,21 @@
  * limitations under the License.
  */
 
-package com.google.zxing.qrcode.detector;
+import AlignmentPatternFinder from './AlignmentPatternFinder';
+import FinderPatternFinder from './FinderPatternFinder';
 
-import com.google.zxing.DecodeHintType;
-import com.google.zxing.FormatException;
-import com.google.zxing.NotFoundException;
-import com.google.zxing.ResultPoint;
-import com.google.zxing.ResultPointCallback;
-import com.google.zxing.common.BitMatrix;
-import com.google.zxing.common.DetectorResult;
-import com.google.zxing.common.GridSampler;
-import com.google.zxing.common.PerspectiveTransform;
-import com.google.zxing.common.detector.MathUtils;
-import com.google.zxing.qrcode.decoder.Version;
+import Version from '../decoder/Version';
 
-import java.util.Map;
+import DecodeHintType from '../../DecodeHintType';
+import NotFoundException from '../../NotFoundException';
+import ResultPoint from '../../ResultPoint';
+
+import GridSampler from '../../common/GridSampler';
+import PerspectiveTransform from '../../common/PerspectiveTransform';
+
+import MathUtils from '../../common/detector/MathUtils';
+import DetectorResult from '../../common/DetectorResult';
+
 
 /**
  * <p>Encapsulates logic that can detect a QR Code in an image, even if the QR Code
@@ -36,32 +36,19 @@ import java.util.Map;
  *
  * @author Sean Owen
  */
-public class Detector {
+export default class Detector {
 
-  private final BitMatrix image;
-  private ResultPointCallback resultPointCallback;
-
-  public Detector(BitMatrix image) {
+  constructor(image) {
     this.image = image;
+    this.resultPointCallback = null;
   }
 
-  protected final BitMatrix getImage() {
-    return image;
+  getImage() {
+    return this.image;
   }
 
-  protected final ResultPointCallback getResultPointCallback() {
-    return resultPointCallback;
-  }
-
-  /**
-   * <p>Detects a QR Code in an image.</p>
-   *
-   * @return {@link DetectorResult} encapsulating results of detecting a QR Code
-   * @throws NotFoundException if QR Code cannot be found
-   * @throws FormatException if a QR Code cannot be decoded
-   */
-  public DetectorResult detect() throws NotFoundException, FormatException {
-    return detect(null);
+  getResultPointCallback() {
+    return this.resultPointCallback;
   }
 
   /**
@@ -72,89 +59,79 @@ public class Detector {
    * @throws NotFoundException if QR Code cannot be found
    * @throws FormatException if a QR Code cannot be decoded
    */
-  public final DetectorResult detect(Map<DecodeHintType,?> hints) throws NotFoundException, FormatException {
+  detect(hints) {
 
-    resultPointCallback = hints == null ? null :
-        (ResultPointCallback) hints.get(DecodeHintType.NEED_RESULT_POINT_CALLBACK);
+    this.resultPointCallback = !hints ? null : hints[DecodeHintType.NEED_RESULT_POINT_CALLBACK];
 
-    FinderPatternFinder finder = new FinderPatternFinder(image, resultPointCallback);
-    FinderPatternInfo info = finder.find(hints);
+    const finder = new FinderPatternFinder(this.image, this.resultPointCallback);
+    const info = finder.find(hints);
 
-    return processFinderPatternInfo(info);
+    return this.processFinderPatternInfo(info);
   }
 
-  protected final DetectorResult processFinderPatternInfo(FinderPatternInfo info)
-      throws NotFoundException, FormatException {
+  processFinderPatternInfo(info) {
 
-    FinderPattern topLeft = info.getTopLeft();
-    FinderPattern topRight = info.getTopRight();
-    FinderPattern bottomLeft = info.getBottomLeft();
+    const topLeft = info.getTopLeft();
+    const topRight = info.getTopRight();
+    const bottomLeft = info.getBottomLeft();
 
-    float moduleSize = calculateModuleSize(topLeft, topRight, bottomLeft);
-    if (moduleSize < 1.0f) {
+    const moduleSize = this.calculateModuleSize(topLeft, topRight, bottomLeft);
+    if (moduleSize < 1.0) {
       throw NotFoundException.getNotFoundInstance();
     }
-    int dimension = computeDimension(topLeft, topRight, bottomLeft, moduleSize);
-    Version provisionalVersion = Version.getProvisionalVersionForDimension(dimension);
-    int modulesBetweenFPCenters = provisionalVersion.getDimensionForVersion() - 7;
+    const dimension = Detector.computeDimension(topLeft, topRight, bottomLeft, moduleSize);
+    const provisionalVersion = Version.getProvisionalVersionForDimension(dimension);
+    const modulesBetweenFPCenters = provisionalVersion.getDimensionForVersion() - 7;
 
-    AlignmentPattern alignmentPattern = null;
+    let alignmentPattern = null;
     // Anything above version 1 has an alignment pattern
     if (provisionalVersion.getAlignmentPatternCenters().length > 0) {
 
       // Guess where a "bottom right" finder pattern would have been
-      float bottomRightX = topRight.getX() - topLeft.getX() + bottomLeft.getX();
-      float bottomRightY = topRight.getY() - topLeft.getY() + bottomLeft.getY();
+      const bottomRightX = topRight.getX() - topLeft.getX() + bottomLeft.getX();
+      const bottomRightY = topRight.getY() - topLeft.getY() + bottomLeft.getY();
 
       // Estimate that alignment pattern is closer by 3 modules
       // from "bottom right" to known top left location
-      float correctionToTopLeft = 1.0f - 3.0f / (float) modulesBetweenFPCenters;
-      int estAlignmentX = (int) (topLeft.getX() + correctionToTopLeft * (bottomRightX - topLeft.getX()));
-      int estAlignmentY = (int) (topLeft.getY() + correctionToTopLeft * (bottomRightY - topLeft.getY()));
+      const correctionToTopLeft = 1.0 - 3.0 / modulesBetweenFPCenters;
+      const estAlignmentX = Math.floor(topLeft.getX() + correctionToTopLeft * (bottomRightX - topLeft.getX()));
+      const estAlignmentY = Math.floor(topLeft.getY() + correctionToTopLeft * (bottomRightY - topLeft.getY()));
 
       // Kind of arbitrary -- expand search radius before giving up
-      for (int i = 4; i <= 16; i <<= 1) {
+      for (let i = 4; i <= 16; i <<= 1) {
         try {
-          alignmentPattern = findAlignmentInRegion(moduleSize,
-              estAlignmentX,
-              estAlignmentY,
-              (float) i);
+          alignmentPattern = this.findAlignmentInRegion(moduleSize, estAlignmentX, estAlignmentY, i);
           break;
-        } catch (NotFoundException re) {
+        } catch (e) {
           // try next round
         }
       }
       // If we didn't find alignment pattern... well try anyway without it
     }
 
-    PerspectiveTransform transform =
-        createTransform(topLeft, topRight, bottomLeft, alignmentPattern, dimension);
+    const transform = Detector.createTransform(topLeft, topRight, bottomLeft, alignmentPattern, dimension);
 
-    BitMatrix bits = sampleGrid(image, transform, dimension);
+    const bits = Detector.sampleGrid(this.image, transform, dimension);
 
-    ResultPoint[] points;
-    if (alignmentPattern == null) {
-      points = new ResultPoint[]{bottomLeft, topLeft, topRight};
+    let points;
+    if (!alignmentPattern) {
+      points = [bottomLeft, topLeft, topRight];
     } else {
-      points = new ResultPoint[]{bottomLeft, topLeft, topRight, alignmentPattern};
+      points = [bottomLeft, topLeft, topRight, alignmentPattern];
     }
     return new DetectorResult(bits, points);
   }
 
-  private static PerspectiveTransform createTransform(ResultPoint topLeft,
-                                                      ResultPoint topRight,
-                                                      ResultPoint bottomLeft,
-                                                      ResultPoint alignmentPattern,
-                                                      int dimension) {
-    float dimMinusThree = (float) dimension - 3.5f;
-    float bottomRightX;
-    float bottomRightY;
-    float sourceBottomRightX;
-    float sourceBottomRightY;
-    if (alignmentPattern != null) {
+  static createTransform(topLeft, topRight, bottomLeft, alignmentPattern, dimension) {
+    const dimMinusThree = dimension - 3.5;
+    let bottomRightX;
+    let bottomRightY;
+    let sourceBottomRightX;
+    let sourceBottomRightY;
+    if (alignmentPattern) {
       bottomRightX = alignmentPattern.getX();
       bottomRightY = alignmentPattern.getY();
-      sourceBottomRightX = dimMinusThree - 3.0f;
+      sourceBottomRightX = dimMinusThree - 3.0;
       sourceBottomRightY = sourceBottomRightX;
     } else {
       // Don't have an alignment pattern, just make up the bottom-right point
@@ -165,13 +142,13 @@ public class Detector {
     }
 
     return PerspectiveTransform.quadrilateralToQuadrilateral(
-        3.5f,
-        3.5f,
+        3.5,
+        3.5,
         dimMinusThree,
-        3.5f,
+        3.5,
         sourceBottomRightX,
         sourceBottomRightY,
-        3.5f,
+        3.5,
         dimMinusThree,
         topLeft.getX(),
         topLeft.getY(),
@@ -183,11 +160,9 @@ public class Detector {
         bottomLeft.getY());
   }
 
-  private static BitMatrix sampleGrid(BitMatrix image,
-                                      PerspectiveTransform transform,
-                                      int dimension) throws NotFoundException {
+  static sampleGrid(image, transform, dimension) {
 
-    GridSampler sampler = GridSampler.getInstance();
+    const sampler = GridSampler.getInstance();
     return sampler.sampleGrid(image, dimension, dimension, transform);
   }
 
@@ -195,13 +170,11 @@ public class Detector {
    * <p>Computes the dimension (number of modules on a size) of the QR Code based on the position
    * of the finder patterns and estimated module size.</p>
    */
-  private static int computeDimension(ResultPoint topLeft,
-                                      ResultPoint topRight,
-                                      ResultPoint bottomLeft,
-                                      float moduleSize) throws NotFoundException {
-    int tltrCentersDimension = MathUtils.round(ResultPoint.distance(topLeft, topRight) / moduleSize);
-    int tlblCentersDimension = MathUtils.round(ResultPoint.distance(topLeft, bottomLeft) / moduleSize);
-    int dimension = ((tltrCentersDimension + tlblCentersDimension) / 2) + 7;
+  static computeDimension(topLeft, topRight, bottomLeft, moduleSize) {
+    
+    const tltrCentersDimension = MathUtils.round(ResultPoint.distance(topLeft, topRight) / moduleSize);
+    const tlblCentersDimension = MathUtils.round(ResultPoint.distance(topLeft, bottomLeft) / moduleSize);
+    let dimension = Math.floor((tltrCentersDimension + tlblCentersDimension) / 2) + 7;
     switch (dimension & 0x03) { // mod 4
       case 0:
         dimension++;
@@ -225,12 +198,10 @@ public class Detector {
    * @param bottomLeft detected bottom-left finder pattern center
    * @return estimated module size
    */
-  protected final float calculateModuleSize(ResultPoint topLeft,
-                                            ResultPoint topRight,
-                                            ResultPoint bottomLeft) {
+  calculateModuleSize(topLeft, topRight, bottomLeft) {
     // Take the average
-    return (calculateModuleSizeOneWay(topLeft, topRight) +
-        calculateModuleSizeOneWay(topLeft, bottomLeft)) / 2.0f;
+    return (this.calculateModuleSizeOneWay(topLeft, topRight)
+    + this.calculateModuleSizeOneWay(topLeft, bottomLeft)) / 2.0;
   }
 
   /**
@@ -238,24 +209,26 @@ public class Detector {
    * {@link #sizeOfBlackWhiteBlackRunBothWays(int, int, int, int)} to figure the
    * width of each, measuring along the axis between their centers.</p>
    */
-  private float calculateModuleSizeOneWay(ResultPoint pattern, ResultPoint otherPattern) {
-    float moduleSizeEst1 = sizeOfBlackWhiteBlackRunBothWays((int) pattern.getX(),
-        (int) pattern.getY(),
-        (int) otherPattern.getX(),
-        (int) otherPattern.getY());
-    float moduleSizeEst2 = sizeOfBlackWhiteBlackRunBothWays((int) otherPattern.getX(),
-        (int) otherPattern.getY(),
-        (int) pattern.getX(),
-        (int) pattern.getY());
-    if (Float.isNaN(moduleSizeEst1)) {
-      return moduleSizeEst2 / 7.0f;
+  calculateModuleSizeOneWay(pattern, otherPattern) {
+    const moduleSizeEst1 = this.sizeOfBlackWhiteBlackRunBothWays(
+      pattern.getX(),
+      pattern.getY(),
+      otherPattern.getX(),
+      otherPattern.getY());
+    const moduleSizeEst2 = this.sizeOfBlackWhiteBlackRunBothWays(
+      otherPattern.getX(),
+      otherPattern.getY(),
+      pattern.getX(),
+      pattern.getY());
+    if (Number.isNaN(moduleSizeEst1)) {
+      return moduleSizeEst2 / 7.0;
     }
-    if (Float.isNaN(moduleSizeEst2)) {
-      return moduleSizeEst1 / 7.0f;
+    if (Number.isNaN(moduleSizeEst2)) {
+      return moduleSizeEst1 / 7.0;
     }
     // Average them, and divide by 7 since we've counted the width of 3 black modules,
     // and 1 white and 1 black module on either side. Ergo, divide sum by 14.
-    return (moduleSizeEst1 + moduleSizeEst2) / 14.0f;
+    return (moduleSizeEst1 + moduleSizeEst2) / 14.0;
   }
 
   /**
@@ -263,36 +236,41 @@ public class Detector {
    * a finder pattern by looking for a black-white-black run from the center in the direction
    * of another point (another finder pattern center), and in the opposite direction too.
    */
-  private float sizeOfBlackWhiteBlackRunBothWays(int fromX, int fromY, int toX, int toY) {
+  sizeOfBlackWhiteBlackRunBothWays(fromX, fromY, toX, toY) {
 
-    float result = sizeOfBlackWhiteBlackRun(fromX, fromY, toX, toY);
+    fromX = Math.floor(fromX);
+    fromY = Math.floor(fromY);
+    toX =Math.floor(toX);
+    toY = Math.floor(toY);
+
+    let result = this.sizeOfBlackWhiteBlackRun(fromX, fromY, toX, toY);
 
     // Now count other way -- don't run off image though of course
-    float scale = 1.0f;
-    int otherToX = fromX - (toX - fromX);
+    let scale = 1.0;
+    let otherToX = fromX - (toX - fromX);
     if (otherToX < 0) {
-      scale = (float) fromX / (float) (fromX - otherToX);
+      scale = fromX / (fromX - otherToX);
       otherToX = 0;
-    } else if (otherToX >= image.getWidth()) {
-      scale = (float) (image.getWidth() - 1 - fromX) / (float) (otherToX - fromX);
-      otherToX = image.getWidth() - 1;
+    } else if (otherToX >= this.image.getWidth()) {
+      scale = (this.image.getWidth() - 1 - fromX) / (otherToX - fromX);
+      otherToX = this.image.getWidth() - 1;
     }
-    int otherToY = (int) (fromY - (toY - fromY) * scale);
+    let otherToY = Math.floor(fromY - (toY - fromY) * scale);
 
-    scale = 1.0f;
+    scale = 1.0;
     if (otherToY < 0) {
-      scale = (float) fromY / (float) (fromY - otherToY);
+      scale = fromY / (fromY - otherToY);
       otherToY = 0;
-    } else if (otherToY >= image.getHeight()) {
-      scale = (float) (image.getHeight() - 1 - fromY) / (float) (otherToY - fromY);
-      otherToY = image.getHeight() - 1;
+    } else if (otherToY >= this.image.getHeight()) {
+      scale = (this.image.getHeight() - 1 - fromY) / (otherToY - fromY);
+      otherToY = this.image.getHeight() - 1;
     }
-    otherToX = (int) (fromX + (otherToX - fromX) * scale);
+    otherToX = Math.floor(fromX + (otherToX - fromX) * scale);
 
-    result += sizeOfBlackWhiteBlackRun(fromX, fromY, otherToX, otherToY);
+    result += this.sizeOfBlackWhiteBlackRun(fromX, fromY, otherToX, otherToY);
 
     // Middle pixel is double-counted this way; subtract 1
-    return result - 1.0f;
+    return result - 1.0;
   }
 
   /**
@@ -303,12 +281,12 @@ public class Detector {
    * <p>This is used when figuring out how wide a finder pattern is, when the finder pattern
    * may be skewed or rotated.</p>
    */
-  private float sizeOfBlackWhiteBlackRun(int fromX, int fromY, int toX, int toY) {
+  sizeOfBlackWhiteBlackRun(fromX, fromY, toX, toY) {
     // Mild variant of Bresenham's algorithm;
     // see http://en.wikipedia.org/wiki/Bresenham's_line_algorithm
-    boolean steep = Math.abs(toY - fromY) > Math.abs(toX - fromX);
+    const steep = Math.abs(toY - fromY) > Math.abs(toX - fromX);
     if (steep) {
-      int temp = fromX;
+      let temp = fromX;
       fromX = fromY;
       fromY = temp;
       temp = toX;
@@ -316,25 +294,25 @@ public class Detector {
       toY = temp;
     }
 
-    int dx = Math.abs(toX - fromX);
-    int dy = Math.abs(toY - fromY);
-    int error = -dx / 2;
-    int xstep = fromX < toX ? 1 : -1;
-    int ystep = fromY < toY ? 1 : -1;
+    const dx = Math.abs(toX - fromX);
+    const dy = Math.abs(toY - fromY);
+    let error = Math.floor(-dx / 2);
+    const xstep = fromX < toX ? 1 : -1;
+    const ystep = fromY < toY ? 1 : -1;
 
     // In black pixels, looking for white, first or second time.
-    int state = 0;
+    let state = 0;
     // Loop up until x == toX, but not beyond
-    int xLimit = toX + xstep;
-    for (int x = fromX, y = fromY; x != xLimit; x += xstep) {
-      int realX = steep ? y : x;
-      int realY = steep ? x : y;
+    const xLimit = toX + xstep;
+    for (let x = fromX, y = fromY; x !== xLimit; x += xstep) {
+      const realX = steep ? y : x;
+      const realY = steep ? x : y;
 
       // Does current pixel mean we have moved white to black or vice versa?
       // Scanning black in state 0,2 and white in state 1, so if we find the wrong
       // color, advance to next state or end if we are in state 2 already
-      if ((state == 1) == image.get(realX, realY)) {
-        if (state == 2) {
+      if ((state === 1) === this.image.get(realX, realY)) {
+        if (state === 2) {
           return MathUtils.distance(x, y, fromX, fromY);
         }
         state++;
@@ -342,7 +320,7 @@ public class Detector {
 
       error += dy;
       if (error > 0) {
-        if (y == toY) {
+        if (y === toY) {
           break;
         }
         y += ystep;
@@ -352,11 +330,11 @@ public class Detector {
     // Found black-white-black; give the benefit of the doubt that the next pixel outside the image
     // is "white" so this last point at (toX+xStep,toY) is the right ending. This is really a
     // small approximation; (toX+xStep,toY+yStep) might be really correct. Ignore this.
-    if (state == 2) {
+    if (state === 2) {
       return MathUtils.distance(toX + xstep, toY, fromX, fromY);
     }
     // else we didn't find even black-white-black; no estimate is really possible
-    return Float.NaN;
+    return NaN;
   }
 
   /**
@@ -370,35 +348,32 @@ public class Detector {
    * @return {@link AlignmentPattern} if found, or null otherwise
    * @throws NotFoundException if an unexpected error occurs during detection
    */
-  protected final AlignmentPattern findAlignmentInRegion(float overallEstModuleSize,
-                                                         int estAlignmentX,
-                                                         int estAlignmentY,
-                                                         float allowanceFactor)
-      throws NotFoundException {
+  findAlignmentInRegion(overallEstModuleSize, estAlignmentX, estAlignmentY, allowanceFactor) {
+    
     // Look for an alignment pattern (3 modules in size) around where it
     // should be
-    int allowance = (int) (allowanceFactor * overallEstModuleSize);
-    int alignmentAreaLeftX = Math.max(0, estAlignmentX - allowance);
-    int alignmentAreaRightX = Math.min(image.getWidth() - 1, estAlignmentX + allowance);
+    const allowance = Math.floor(allowanceFactor * overallEstModuleSize);
+    const alignmentAreaLeftX = Math.max(0, estAlignmentX - allowance);
+    const alignmentAreaRightX = Math.min(this.image.getWidth() - 1, estAlignmentX + allowance);
     if (alignmentAreaRightX - alignmentAreaLeftX < overallEstModuleSize * 3) {
       throw NotFoundException.getNotFoundInstance();
     }
 
-    int alignmentAreaTopY = Math.max(0, estAlignmentY - allowance);
-    int alignmentAreaBottomY = Math.min(image.getHeight() - 1, estAlignmentY + allowance);
+    const alignmentAreaTopY = Math.max(0, estAlignmentY - allowance);
+    const alignmentAreaBottomY = Math.min(this.image.getHeight() - 1, estAlignmentY + allowance);
     if (alignmentAreaBottomY - alignmentAreaTopY < overallEstModuleSize * 3) {
       throw NotFoundException.getNotFoundInstance();
     }
 
-    AlignmentPatternFinder alignmentFinder =
+    const alignmentFinder =
         new AlignmentPatternFinder(
-            image,
+            this.image,
             alignmentAreaLeftX,
             alignmentAreaTopY,
             alignmentAreaRightX - alignmentAreaLeftX,
             alignmentAreaBottomY - alignmentAreaTopY,
             overallEstModuleSize,
-            resultPointCallback);
+            this.resultPointCallback);
     return alignmentFinder.find();
   }
 

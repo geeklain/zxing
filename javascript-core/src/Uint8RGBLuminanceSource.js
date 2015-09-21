@@ -41,19 +41,29 @@ export default class Uint8RGBLuminanceSource extends LuminanceSource {
     } else {
       // In order to measure pure decoding speed, we convert the entire image to a greyscale array
       // up front, which is the same as the Y channel of the YUVLuminanceSource in the real app.
-      this.luminances = [];
-      for (let i = 0, length = width * height; i < length; i++) {
+      const length = width * height;
+      this.luminances = new Uint8ClampedArray(length);
+      for (let i = 0; i < length; i++) {
 
         const pos = i * 4;
         const r = pixels[pos];
         const g = pixels[pos + 1];
         const b = pixels[pos + 2];
+        const a = pixels[pos + 3];
+        
+        let luminance;
         if (r === g && g === b) {
           // Image is already greyscale, so pick any channel.
-          this.luminances[i] = r;
+          luminance = r;
         } else {
           // Calculate luminance cheaply, favoring green.
-          this.luminances[i] = (r + 2 * g + b) / 4;
+          luminance = Math.floor((r + 2 * g + b) / 4);
+        }
+        if (a === 0xFF) {
+          this.luminances[i] = luminance;
+        } else {
+          // assume white background for transparent images
+          this.luminances[i] = Math.floor(((luminance * a) + 0xFF * (0xFF - a)) / 0xFF);  
         }
       }
     }
@@ -65,7 +75,7 @@ export default class Uint8RGBLuminanceSource extends LuminanceSource {
     }
     const width = this.getWidth();
     if (!row || row.length < width) {
-      row = [];
+      row = new Uint8ClampedArray(width);
     }
     const offset = (y + this.top) * this.dataWidth + this.left;
     for (let i = 0; i < width; i++) {
@@ -86,7 +96,7 @@ export default class Uint8RGBLuminanceSource extends LuminanceSource {
     }
 
     const area = width * height;
-    const matrix = [];
+    const matrix = new Uint8ClampedArray(area);
     let inputOffset = this.top * this.dataWidth + this.left;
 
     // If the width matches the full width of the underlying data, perform a single copy.

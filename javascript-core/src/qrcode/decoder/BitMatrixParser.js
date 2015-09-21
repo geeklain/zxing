@@ -14,31 +14,30 @@
  * limitations under the License.
  */
 
-package com.google.zxing.qrcode.decoder;
+import DataMask from '../decoder/DataMask';
+import FormatInformation from '../decoder/FormatInformation';
+import Version from '../decoder/Version';
 
-import com.google.zxing.FormatException;
-import com.google.zxing.common.BitMatrix;
+import FormatException from '../../FormatException';
 
 /**
  * @author Sean Owen
  */
-final class BitMatrixParser {
-
-  private final BitMatrix bitMatrix;
-  private Version parsedVersion;
-  private FormatInformation parsedFormatInfo;
-  private boolean mirror;
+export default class BitMatrixParser {
 
   /**
    * @param bitMatrix {@link BitMatrix} to parse
    * @throws FormatException if dimension is not >= 21 and 1 mod 4
    */
-  BitMatrixParser(BitMatrix bitMatrix) throws FormatException {
-    int dimension = bitMatrix.getHeight();
-    if (dimension < 21 || (dimension & 0x03) != 1) {
+  constructor(bitMatrix) {
+    const dimension = bitMatrix.getHeight();
+    if (dimension < 21 || (dimension & 0x03) !== 1) {
       throw FormatException.getFormatInstance();
     }
     this.bitMatrix = bitMatrix;
+    this.parsedVersion = null;
+    this.parsedFormatInfo = null;
+    this.isMirror = false;
   }
 
   /**
@@ -48,40 +47,40 @@ final class BitMatrixParser {
    * @throws FormatException if both format information locations cannot be parsed as
    * the valid encoding of format information
    */
-  FormatInformation readFormatInformation() throws FormatException {
+  readFormatInformation() {
 
-    if (parsedFormatInfo != null) {
-      return parsedFormatInfo;
+    if (this.parsedFormatInfo) {
+      return this.parsedFormatInfo;
     }
 
     // Read top-left format info bits
-    int formatInfoBits1 = 0;
-    for (int i = 0; i < 6; i++) {
-      formatInfoBits1 = copyBit(i, 8, formatInfoBits1);
+    let formatInfoBits1 = 0;
+    for (let i = 0; i < 6; i++) {
+      formatInfoBits1 = this.copyBit(i, 8, formatInfoBits1);
     }
     // .. and skip a bit in the timing pattern ...
-    formatInfoBits1 = copyBit(7, 8, formatInfoBits1);
-    formatInfoBits1 = copyBit(8, 8, formatInfoBits1);
-    formatInfoBits1 = copyBit(8, 7, formatInfoBits1);
+    formatInfoBits1 = this.copyBit(7, 8, formatInfoBits1);
+    formatInfoBits1 = this.copyBit(8, 8, formatInfoBits1);
+    formatInfoBits1 = this.copyBit(8, 7, formatInfoBits1);
     // .. and skip a bit in the timing pattern ...
-    for (int j = 5; j >= 0; j--) {
-      formatInfoBits1 = copyBit(8, j, formatInfoBits1);
+    for (let j = 5; j >= 0; j--) {
+      formatInfoBits1 = this.copyBit(8, j, formatInfoBits1);
     }
 
     // Read the top-right/bottom-left pattern too
-    int dimension = bitMatrix.getHeight();
-    int formatInfoBits2 = 0;
-    int jMin = dimension - 7;
-    for (int j = dimension - 1; j >= jMin; j--) {
-      formatInfoBits2 = copyBit(8, j, formatInfoBits2);
+    const dimension = this.bitMatrix.getHeight();
+    let formatInfoBits2 = 0;
+    const jMin = dimension - 7;
+    for (let j = dimension - 1; j >= jMin; j--) {
+      formatInfoBits2 = this.copyBit(8, j, formatInfoBits2);
     }
-    for (int i = dimension - 8; i < dimension; i++) {
-      formatInfoBits2 = copyBit(i, 8, formatInfoBits2);
+    for (let i = dimension - 8; i < dimension; i++) {
+      formatInfoBits2 = this.copyBit(i, 8, formatInfoBits2);
     }
 
-    parsedFormatInfo = FormatInformation.decodeFormatInformation(formatInfoBits1, formatInfoBits2);
-    if (parsedFormatInfo != null) {
-      return parsedFormatInfo;
+    this.parsedFormatInfo = FormatInformation.decodeFormatInformation(formatInfoBits1, formatInfoBits2);
+    if (this.parsedFormatInfo) {
+      return this.parsedFormatInfo;
     }
     throw FormatException.getFormatInstance();
   }
@@ -93,52 +92,52 @@ final class BitMatrixParser {
    * @throws FormatException if both version information locations cannot be parsed as
    * the valid encoding of version information
    */
-  Version readVersion() throws FormatException {
+  readVersion() {
 
-    if (parsedVersion != null) {
-      return parsedVersion;
+    if (this.parsedVersion) {
+      return this.parsedVersion;
     }
 
-    int dimension = bitMatrix.getHeight();
+    const dimension = this.bitMatrix.getHeight();
 
-    int provisionalVersion = (dimension - 17) / 4;
+    const provisionalVersion = Math.floor((dimension - 17) / 4);
     if (provisionalVersion <= 6) {
       return Version.getVersionForNumber(provisionalVersion);
     }
 
     // Read top-right version info: 3 wide by 6 tall
-    int versionBits = 0;
-    int ijMin = dimension - 11;
-    for (int j = 5; j >= 0; j--) {
-      for (int i = dimension - 9; i >= ijMin; i--) {
-        versionBits = copyBit(i, j, versionBits);
+    let versionBits = 0;
+    const ijMin = dimension - 11;
+    for (let j = 5; j >= 0; j--) {
+      for (let i = dimension - 9; i >= ijMin; i--) {
+        versionBits = this.copyBit(i, j, versionBits);
       }
     }
 
-    Version theParsedVersion = Version.decodeVersionInformation(versionBits);
-    if (theParsedVersion != null && theParsedVersion.getDimensionForVersion() == dimension) {
-      parsedVersion = theParsedVersion;
+    let theParsedVersion = Version.decodeVersionInformation(versionBits);
+    if (theParsedVersion && theParsedVersion.getDimensionForVersion() === dimension) {
+      this.parsedVersion = theParsedVersion;
       return theParsedVersion;
     }
 
     // Hmm, failed. Try bottom left: 6 wide by 3 tall
     versionBits = 0;
-    for (int i = 5; i >= 0; i--) {
-      for (int j = dimension - 9; j >= ijMin; j--) {
-        versionBits = copyBit(i, j, versionBits);
+    for (let i = 5; i >= 0; i--) {
+      for (let j = dimension - 9; j >= ijMin; j--) {
+        versionBits = this.copyBit(i, j, versionBits);
       }
     }
 
     theParsedVersion = Version.decodeVersionInformation(versionBits);
-    if (theParsedVersion != null && theParsedVersion.getDimensionForVersion() == dimension) {
-      parsedVersion = theParsedVersion;
+    if (theParsedVersion && theParsedVersion.getDimensionForVersion() === dimension) {
+      this.parsedVersion = theParsedVersion;
       return theParsedVersion;
     }
     throw FormatException.getFormatInstance();
   }
 
-  private int copyBit(int i, int j, int versionBits) {
-    boolean bit = mirror ? bitMatrix.get(j, i) : bitMatrix.get(i, j);
+  copyBit(i, j, versionBits) {
+    const bit = this.isMirror ? this.bitMatrix.get(j, i) : this.bitMatrix.get(i, j);
     return bit ? (versionBits << 1) | 0x1 : versionBits << 1;
   }
 
@@ -150,46 +149,46 @@ final class BitMatrixParser {
    * @return bytes encoded within the QR Code
    * @throws FormatException if the exact number of bytes expected is not read
    */
-  byte[] readCodewords() throws FormatException {
+  readCodewords() {
 
-    FormatInformation formatInfo = readFormatInformation();
-    Version version = readVersion();
+    const formatInfo = this.readFormatInformation();
+    const version = this.readVersion();
 
     // Get the data mask for the format used in this QR Code. This will exclude
     // some bits from reading as we wind through the bit matrix.
-    DataMask dataMask = DataMask.forReference(formatInfo.getDataMask());
-    int dimension = bitMatrix.getHeight();
-    dataMask.unmaskBitMatrix(bitMatrix, dimension);
+    const dataMask = DataMask.forReference(formatInfo.getDataMask());
+    const dimension = this.bitMatrix.getHeight();
+    dataMask.unmaskBitMatrix(this.bitMatrix, dimension);
 
-    BitMatrix functionPattern = version.buildFunctionPattern();
+    const functionPattern = version.buildFunctionPattern();
 
-    boolean readingUp = true;
-    byte[] result = new byte[version.getTotalCodewords()];
-    int resultOffset = 0;
-    int currentByte = 0;
-    int bitsRead = 0;
+    let readingUp = true;
+    const result = new Uint8ClampedArray(version.getTotalCodewords());
+    let resultOffset = 0;
+    let currentByte = 0;
+    let bitsRead = 0;
     // Read columns in pairs, from right to left
-    for (int j = dimension - 1; j > 0; j -= 2) {
-      if (j == 6) {
+    for (let j = dimension - 1; j > 0; j -= 2) {
+      if (j === 6) {
         // Skip whole column with vertical alignment pattern;
         // saves time and makes the other code proceed more cleanly
         j--;
       }
       // Read alternatingly from bottom to top then top to bottom
-      for (int count = 0; count < dimension; count++) {
-        int i = readingUp ? dimension - 1 - count : count;
-        for (int col = 0; col < 2; col++) {
+      for (let count = 0; count < dimension; count++) {
+        let i = readingUp ? dimension - 1 - count : count;
+        for (let col = 0; col < 2; col++) {
           // Ignore bits covered by the function pattern
           if (!functionPattern.get(j - col, i)) {
             // Read a bit
             bitsRead++;
             currentByte <<= 1;
-            if (bitMatrix.get(j - col, i)) {
+            if (this.bitMatrix.get(j - col, i)) {
               currentByte |= 1;
             }
             // If we've made a whole byte, save it off
-            if (bitsRead == 8) {
-              result[resultOffset++] = (byte) currentByte;
+            if (bitsRead === 8) {
+              result[resultOffset++] = currentByte;
               bitsRead = 0;
               currentByte = 0;
             }
@@ -198,7 +197,7 @@ final class BitMatrixParser {
       }
       readingUp ^= true; // readingUp = !readingUp; // switch directions
     }
-    if (resultOffset != version.getTotalCodewords()) {
+    if (resultOffset !== version.getTotalCodewords()) {
       throw FormatException.getFormatInstance();
     }
     return result;
@@ -207,13 +206,13 @@ final class BitMatrixParser {
   /**
    * Revert the mask removal done while reading the code words. The bit matrix should revert to its original state.
    */
-  void remask() {
-    if (parsedFormatInfo == null) {
+  remask() {
+    if (!this.parsedFormatInfo) {
       return; // We have no format information, and have no data mask
     }
-    DataMask dataMask = DataMask.forReference(parsedFormatInfo.getDataMask());
-    int dimension = bitMatrix.getHeight();
-    dataMask.unmaskBitMatrix(bitMatrix, dimension);
+    const dataMask = DataMask.forReference(this.parsedFormatInfo.getDataMask());
+    const dimension = this.bitMatrix.getHeight();
+    dataMask.unmaskBitMatrix(this.bitMatrix, dimension);
   }
 
   /**
@@ -224,19 +223,19 @@ final class BitMatrixParser {
    * 
    * @param mirror Whether to read version and format information mirrored.
    */
-  void setMirror(boolean mirror) {
-    parsedVersion = null;
-    parsedFormatInfo = null;
-    this.mirror = mirror;
+  setMirror(mirror) {
+    this.parsedVersion = null;
+    this.parsedFormatInfo = null;
+    this.isMirror = mirror;
   }
 
   /** Mirror the bit matrix in order to attempt a second reading. */
-  void mirror() {
-    for (int x = 0; x < bitMatrix.getWidth(); x++) {
-      for (int y = x + 1; y < bitMatrix.getHeight(); y++) {
-        if (bitMatrix.get(x, y) != bitMatrix.get(y, x)) {
-          bitMatrix.flip(y, x);
-          bitMatrix.flip(x, y);          
+  mirror() {
+    for (let x = 0; x < this.bitMatrix.getWidth(); x++) {
+      for (let y = x + 1; y < this.bitMatrix.getHeight(); y++) {
+        if (this.bitMatrix.get(x, y) != this.bitMatrix.get(y, x)) {
+          this.bitMatrix.flip(y, x);
+          this.bitMatrix.flip(x, y);          
         }
       }
     }

@@ -13,8 +13,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+ 
+import IllegalArgumentException from '../../IllegalArgumentException';
 
-package com.google.zxing.qrcode.decoder;
+
+const FOR_BITS = [];
 
 /**
  * <p>See ISO 18004:2006, 6.5.1. This enum encapsulates the four error correction levels
@@ -22,39 +25,44 @@ package com.google.zxing.qrcode.decoder;
  *
  * @author Sean Owen
  */
-public enum ErrorCorrectionLevel {
+export default class ErrorCorrectionLevel {
 
-  /** L = ~7% correction */
-  L(0x01),
-  /** M = ~15% correction */
-  M(0x00),
-  /** Q = ~25% correction */
-  Q(0x03),
-  /** H = ~30% correction */
-  H(0x02);
-
-  private static final ErrorCorrectionLevel[] FOR_BITS = {M, L, H, Q};
-
-  private final int bits;
-
-  ErrorCorrectionLevel(int bits) {
+  constructor(bits, fakeOrdinal) {
     this.bits = bits;
+    this.fakeOrdinal = fakeOrdinal;
   }
 
-  public int getBits() {
-    return bits;
+  getBits() {
+    return this.bits;
+  }
+  
+  ordinal() {
+    return this.fakeOrdinal;
   }
 
   /**
    * @param bits int containing the two bits encoding a QR Code's error correction level
    * @return ErrorCorrectionLevel representing the encoded error correction level
    */
-  public static ErrorCorrectionLevel forBits(int bits) {
+  static forBits(bits) {
     if (bits < 0 || bits >= FOR_BITS.length) {
       throw new IllegalArgumentException();
     }
     return FOR_BITS[bits];
   }
-
-
 }
+
+/** L = ~7% correction */
+ErrorCorrectionLevel.L = new ErrorCorrectionLevel(0x01, 0);
+  /** M = ~15% correction */
+ErrorCorrectionLevel.M = new ErrorCorrectionLevel(0x00, 1);
+  /** Q = ~25% correction */
+ErrorCorrectionLevel.Q = new ErrorCorrectionLevel(0x03, 2);
+  /** H = ~30% correction */
+ErrorCorrectionLevel.H = new ErrorCorrectionLevel(0x02, 3);
+
+FOR_BITS.push(
+  ErrorCorrectionLevel.M,
+  ErrorCorrectionLevel.L,
+  ErrorCorrectionLevel.H,
+  ErrorCorrectionLevel.Q);

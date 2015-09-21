@@ -14,21 +14,16 @@
  * limitations under the License.
  */
 
-package com.google.zxing.qrcode.detector;
-
-import com.google.zxing.ResultPoint;
-
+import ResultPoint from '../../ResultPoint';
 /**
  * <p>Encapsulates an alignment pattern, which are the smaller square patterns found in
  * all but the simplest QR Codes.</p>
  *
  * @author Sean Owen
  */
-public final class AlignmentPattern extends ResultPoint {
+export default class AlignmentPattern extends ResultPoint {
 
-  private final float estimatedModuleSize;
-
-  AlignmentPattern(float posX, float posY, float estimatedModuleSize) {
+  constructor(posX, posY, estimatedModuleSize) {
     super(posX, posY);
     this.estimatedModuleSize = estimatedModuleSize;
   }
@@ -37,10 +32,10 @@ public final class AlignmentPattern extends ResultPoint {
    * <p>Determines if this alignment pattern "about equals" an alignment pattern at the stated
    * position and size -- meaning, it is at nearly the same center with nearly the same size.</p>
    */
-  boolean aboutEquals(float moduleSize, float i, float j) {
-    if (Math.abs(i - getY()) <= moduleSize && Math.abs(j - getX()) <= moduleSize) {
-      float moduleSizeDiff = Math.abs(moduleSize - estimatedModuleSize);
-      return moduleSizeDiff <= 1.0f || moduleSizeDiff <= estimatedModuleSize;
+  aboutEquals(moduleSize, i, j) {
+    if (Math.abs(i - this.getY()) <= moduleSize && Math.abs(j - this.getX()) <= moduleSize) {
+      const moduleSizeDiff = Math.abs(moduleSize - this.estimatedModuleSize);
+      return moduleSizeDiff <= 1.0 || moduleSizeDiff <= this.estimatedModuleSize;
     }
     return false;
   }
@@ -49,10 +44,10 @@ public final class AlignmentPattern extends ResultPoint {
    * Combines this object's current estimate of a finder pattern position and module size
    * with a new estimate. It returns a new {@code FinderPattern} containing an average of the two.
    */
-  AlignmentPattern combineEstimate(float i, float j, float newModuleSize) {
-    float combinedX = (getX() + j) / 2.0f;
-    float combinedY = (getY() + i) / 2.0f;
-    float combinedModuleSize = (estimatedModuleSize + newModuleSize) / 2.0f;
+  combineEstimate(i, j, newModuleSize) {
+    const combinedX = (this.getX() + j) / 2.0;
+    const combinedY = (this.getY() + i) / 2.0;
+    const combinedModuleSize = (this.estimatedModuleSize + newModuleSize) / 2.0;
     return new AlignmentPattern(combinedX, combinedY, combinedModuleSize);
   }
 

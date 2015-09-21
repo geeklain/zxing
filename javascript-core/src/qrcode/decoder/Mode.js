@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.google.zxing.qrcode.decoder;
+import IllegalArgumentException from '../../IllegalArgumentException';
 
 /**
  * <p>See ISO 18004:2006, 6.4.1, Tables 2 and 3. This enum encapsulates the various modes in which
@@ -22,24 +22,9 @@ package com.google.zxing.qrcode.decoder;
  *
  * @author Sean Owen
  */
-public enum Mode {
+export default class Mode {
 
-  TERMINATOR(new int[]{0, 0, 0}, 0x00), // Not really a mode...
-  NUMERIC(new int[]{10, 12, 14}, 0x01),
-  ALPHANUMERIC(new int[]{9, 11, 13}, 0x02),
-  STRUCTURED_APPEND(new int[]{0, 0, 0}, 0x03), // Not supported
-  BYTE(new int[]{8, 16, 16}, 0x04),
-  ECI(new int[]{0, 0, 0}, 0x07), // character counts don't apply
-  KANJI(new int[]{8, 10, 12}, 0x08),
-  FNC1_FIRST_POSITION(new int[]{0, 0, 0}, 0x05),
-  FNC1_SECOND_POSITION(new int[]{0, 0, 0}, 0x09),
-  /** See GBT 18284-2000; "Hanzi" is a transliteration of this mode name. */
-  HANZI(new int[]{8, 10, 12}, 0x0D);
-
-  private final int[] characterCountBitsForVersions;
-  private final int bits;
-
-  Mode(int[] characterCountBitsForVersions, int bits) {
+  constructor(characterCountBitsForVersions, bits) {
     this.characterCountBitsForVersions = characterCountBitsForVersions;
     this.bits = bits;
   }
@@ -49,29 +34,29 @@ public enum Mode {
    * @return Mode encoded by these bits
    * @throws IllegalArgumentException if bits do not correspond to a known mode
    */
-  public static Mode forBits(int bits) {
+  static forBits(bits) {
     switch (bits) {
       case 0x0:
-        return TERMINATOR;
+        return Mode.TERMINATOR;
       case 0x1:
-        return NUMERIC;
+        return Mode.NUMERIC;
       case 0x2:
-        return ALPHANUMERIC;
+        return Mode.ALPHANUMERIC;
       case 0x3:
-        return STRUCTURED_APPEND;
+        return Mode.STRUCTURED_APPEND;
       case 0x4:
-        return BYTE;
+        return Mode.BYTE;
       case 0x5:
-        return FNC1_FIRST_POSITION;
+        return Mode.FNC1_FIRST_POSITION;
       case 0x7:
-        return ECI;
+        return Mode.ECI;
       case 0x8:
-        return KANJI;
+        return Mode.KANJI;
       case 0x9:
-        return FNC1_SECOND_POSITION;
+        return Mode.FNC1_SECOND_POSITION;
       case 0xD:
         // 0xD is defined in GBT 18284-2000, may not be supported in foreign country
-        return HANZI;
+        return Mode.HANZI;
       default:
         throw new IllegalArgumentException();
     }
@@ -82,21 +67,34 @@ public enum Mode {
    * @return number of bits used, in this QR Code symbol {@link Version}, to encode the
    *         count of characters that will follow encoded in this Mode
    */
-  public int getCharacterCountBits(Version version) {
-    int number = version.getVersionNumber();
-    int offset;
+  getCharacterCountBits(version) {
+    const number = version.getVersionNumber();
+    let offset;
     if (number <= 9) {
       offset = 0;
-    } else if (number <= 26) {
+    }
+    else if (number <= 26) {
       offset = 1;
-    } else {
+    }
+    else {
       offset = 2;
     }
-    return characterCountBitsForVersions[offset];
+    return this.characterCountBitsForVersions[offset];
   }
 
-  public int getBits() {
-    return bits;
+  getBits() {
+    return this.bits;
   }
-
 }
+
+Mode.TERMINATOR = new Mode([0, 0, 0], 0x00); // Not really a mode...
+Mode.NUMERIC = new Mode([10, 12, 14], 0x01);
+Mode.ALPHANUMERIC = new Mode([9, 11, 13], 0x02);
+Mode.STRUCTURED_APPEND = new Mode([0, 0, 0], 0x03); // Not supported
+Mode.BYTE = new Mode([8, 16, 16], 0x04);
+Mode.ECI = new Mode([0, 0, 0], 0x07); // character counts don't apply
+Mode.KANJI = new Mode([8, 10, 12], 0x08);
+Mode.FNC1_FIRST_POSITION = new Mode([0, 0, 0], 0x05);
+Mode.FNC1_SECOND_POSITION = new Mode([0, 0, 0], 0x09);
+/** See GBT 18284-2000; "Hanzi" is a transliteration of this mode name. */
+Mode.HANZI = new Mode([8, 10, 12], 0x0D);

@@ -9,6 +9,7 @@
     "babel-runtime": "^5.8.20",
     "eslint": "^1.1.0",
     "eslint-loader": "^1.0.0",
+    "text-encoding": "^0.5.2",
     "webpack": "^1.11.0"
   },
   "devDependencies": {
@@ -18,7 +19,7 @@
   },
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "webpack-dev-server": "webpack-dev-server --colors --progress --hot --inline"
+    "webpack-dev-server": "webpack-dev-server --colors --progress --hot --host=$IP --port=$PORT"
   },
   "repository": {
     "type": "git",

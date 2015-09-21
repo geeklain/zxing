@@ -89,10 +89,10 @@ export default class GlobalHistogramBinarizer extends Binarizer {
     this.initArrays(width);
     const localBuckets = this.buckets;
     for (let y = 1; y < 5; y++) {
-      const row = height * y / 5;
+      const row = Math.floor(height * y / 5);
       const localLuminances = source.getRow(row, this.luminances);
       const right = (width * 4) / 5;
-      for (let x = width / 5; x < right; x++) {
+      for (let x = Math.floor(width / 5); x < right; x++) {
         const pixel = localLuminances[x] & 0xff;
         localBuckets[pixel >> LUMINANCE_SHIFT]++;
       }
@@ -122,7 +122,7 @@ export default class GlobalHistogramBinarizer extends Binarizer {
 
   initArrays(luminanceSize) {
     if (this.luminances.length < luminanceSize) {
-      this.luminances = []; // FIXME useless?
+      this.luminances = new Uint8ClampedArray(luminanceSize);
     }
     for (let x = 0; x < LUMINANCE_BUCKETS; x++) {
       this.buckets[x] = 0;

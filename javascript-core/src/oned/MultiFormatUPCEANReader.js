@@ -75,7 +75,7 @@ public final class MultiFormatUPCEANReader extends OneDReader {
     for (UPCEANReader reader : readers) {
       Result result;
       try {
-        result = reader.decodeRow(rowNumber, row, startGuardPattern, hints);
+        result = reader.decodeRow(rowNumber, row, hints, startGuardPattern);
       } catch (ReaderException ignored) {
         continue;
       }

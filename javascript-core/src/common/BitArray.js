@@ -23,7 +23,7 @@ import IllegalArgumentException from '../IllegalArgumentException';
  */
 export default class BitArray {
 
-  constructor(size = 0, bits = []) {
+  constructor(size = 0, bits = new Uint32Array(Math.floor((size + 31) / 32))) {
     this.size = size;
     this.bits = bits;
   }
@@ -33,7 +33,7 @@ export default class BitArray {
   }
 
   getSizeInBytes() {
-    return (this.size + 7) / 8;
+    return Math.floor((this.size + 7) / 8);
   }
 
   /**
@@ -156,7 +156,7 @@ export default class BitArray {
    * Clears all bits (sets to false).
    */
   clear() {
-    this.bits = [];
+    this.bits.fill(0);
   }
 
   /**

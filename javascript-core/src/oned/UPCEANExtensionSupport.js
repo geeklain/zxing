@@ -14,26 +14,25 @@
  * limitations under the License.
  */
 
-package com.google.zxing.oned;
+import UPCEANReader from './UPCEANReader';
+import UPCEANExtension2Support from './UPCEANExtension2Support';
+import UPCEANExtension5Support from './UPCEANExtension5Support';
+ 
+const EXTENSION_START_PATTERN = [1, 1, 2];
 
-import com.google.zxing.NotFoundException;
-import com.google.zxing.ReaderException;
-import com.google.zxing.Result;
-import com.google.zxing.common.BitArray;
+export default class UPCEANExtensionSupport {
 
-final class UPCEANExtensionSupport {
-
-  private static final int[] EXTENSION_START_PATTERN = {1,1,2};
-
-  private final UPCEANExtension2Support twoSupport = new UPCEANExtension2Support();
-  private final UPCEANExtension5Support fiveSupport = new UPCEANExtension5Support();
-
-  Result decodeRow(int rowNumber, BitArray row, int rowOffset) throws NotFoundException {
-    int[] extensionStartRange = UPCEANReader.findGuardPattern(row, rowOffset, false, EXTENSION_START_PATTERN);
+  constructor() {
+    this.twoSupport = new UPCEANExtension2Support();
+    this.fiveSupport = new UPCEANExtension5Support();
+  }
+  
+  decodeRow(rowNumber, row, rowOffset) {
+    const extensionStartRange = UPCEANReader.findGuardPattern(row, rowOffset, false, EXTENSION_START_PATTERN);
     try {
-      return fiveSupport.decodeRow(rowNumber, row, extensionStartRange);
-    } catch (ReaderException ignored) {
-      return twoSupport.decodeRow(rowNumber, row, extensionStartRange);
+      return this.fiveSupport.decodeRow(rowNumber, row, extensionStartRange);
+    } catch (ignored) {
+      return this.twoSupport.decodeRow(rowNumber, row, extensionStartRange);
     }
   }
 

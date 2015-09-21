@@ -1,123 +1,118 @@
 /*
  * Copyright (C) 2010 ZXing authors
  *
- * Licensed under the Apache License, Version 2.0 (the "License");
+ * Licensed under the Apache License, Version 2.0 (the 'License');
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
  *      http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
+ * distributed under the License is distributed on an 'AS IS' BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+ 
+import UPCEANReader from './UPCEANReader';
 
-package com.google.zxing.oned;
+import BarcodeFormat from '../BarcodeFormat'; 
+import Result from '../Result';
+import ResultMetadataType from '../ResultMetadataType';
+import ResultPoint from '../ResultPoint';
 
-import com.google.zxing.BarcodeFormat;
-import com.google.zxing.NotFoundException;
-import com.google.zxing.Result;
-import com.google.zxing.ResultMetadataType;
-import com.google.zxing.ResultPoint;
-import com.google.zxing.common.BitArray;
+import NotFoundException from '../NotFoundException';
 
-import java.util.EnumMap;
-import java.util.Map;
+const CHECK_DIGIT_ENCODINGS = [
+  0x18, 0x14, 0x12, 0x11, 0x0C, 0x06, 0x03, 0x0A, 0x09, 0x05
+];
 
 /**
  * @see UPCEANExtension2Support
  */
-final class UPCEANExtension5Support {
+export default class UPCEANExtension5Support {
 
-  private static final int[] CHECK_DIGIT_ENCODINGS = {
-      0x18, 0x14, 0x12, 0x11, 0x0C, 0x06, 0x03, 0x0A, 0x09, 0x05
-  };
+  constructor() {
+    this.decodeMiddleCounters = new Int32Array(4);
+  }
 
-  private final int[] decodeMiddleCounters = new int[4];
-  private final StringBuilder decodeRowStringBuffer = new StringBuilder();
+  decodeRow(rowNumber, row, extensionStartRange) {
 
-  Result decodeRow(int rowNumber, BitArray row, int[] extensionStartRange) throws NotFoundException {
+    const result = [];
+    const end = this.decodeMiddle(row, extensionStartRange, result);
 
-    StringBuilder result = decodeRowStringBuffer;
-    result.setLength(0);
-    int end = decodeMiddle(row, extensionStartRange, result);
+    const resultString = result.join('');
+    const extensionData = UPCEANExtension5Support.parseExtensionString(resultString);
 
-    String resultString = result.toString();
-    Map<ResultMetadataType,Object> extensionData = parseExtensionString(resultString);
-
-    Result extensionResult =
-        new Result(resultString,
-                   null,
-                   new ResultPoint[] {
-                       new ResultPoint((extensionStartRange[0] + extensionStartRange[1]) / 2.0f, (float) rowNumber),
-                       new ResultPoint((float) end, (float) rowNumber),
-                   },
-                   BarcodeFormat.UPC_EAN_EXTENSION);
-    if (extensionData != null) {
+    const extensionResult = new Result(
+      resultString,
+      null, [
+        new ResultPoint((extensionStartRange[0] + extensionStartRange[1]) / 2.0, rowNumber),
+        new ResultPoint(end, rowNumber)
+      ],
+      BarcodeFormat.UPC_EAN_EXTENSION);
+    if (extensionData) {
       extensionResult.putAllMetadata(extensionData);
     }
     return extensionResult;
   }
 
-  int decodeMiddle(BitArray row, int[] startRange, StringBuilder resultString) throws NotFoundException {
-    int[] counters = decodeMiddleCounters;
+  decodeMiddle(row, startRange, resultString) {
+    const counters = this.decodeMiddleCounters;
     counters[0] = 0;
     counters[1] = 0;
     counters[2] = 0;
     counters[3] = 0;
-    int end = row.getSize();
-    int rowOffset = startRange[1];
+    const end = row.getSize();
+    let rowOffset = startRange[1];
 
-    int lgPatternFound = 0;
+    let lgPatternFound = 0;
 
-    for (int x = 0; x < 5 && rowOffset < end; x++) {
-      int bestMatch = UPCEANReader.decodeDigit(row, counters, rowOffset, UPCEANReader.L_AND_G_PATTERNS);
-      resultString.append((char) ('0' + bestMatch % 10));
-      for (int counter : counters) {
+    for (let x = 0; x < 5 && rowOffset < end; x++) {
+      const bestMatch = UPCEANReader.decodeDigit(row, counters, rowOffset, UPCEANReader.L_AND_G_PATTERNS);
+      resultString.push(bestMatch % 10);
+      counters.forEach(function (counter) {
         rowOffset += counter;
-      }
+      });
       if (bestMatch >= 10) {
         lgPatternFound |= 1 << (4 - x);
       }
-      if (x != 4) {
+      if (x !== 4) {
         // Read off separator if not last
         rowOffset = row.getNextSet(rowOffset);
         rowOffset = row.getNextUnset(rowOffset);
       }
     }
 
-    if (resultString.length() != 5) {
+    if (resultString.length !== 5) {
       throw NotFoundException.getNotFoundInstance();
     }
 
-    int checkDigit = determineCheckDigit(lgPatternFound);
-    if (extensionChecksum(resultString.toString()) != checkDigit) {
+    const checkDigit = UPCEANExtension5Support.determineCheckDigit(lgPatternFound);
+    if (UPCEANExtension5Support.extensionChecksum(resultString.join('')) !== checkDigit) {
       throw NotFoundException.getNotFoundInstance();
     }
-    
+
     return rowOffset;
   }
 
-  private static int extensionChecksum(CharSequence s) {
-    int length = s.length();
-    int sum = 0;
-    for (int i = length - 2; i >= 0; i -= 2) {
-      sum += (int) s.charAt(i) - (int) '0';
+  static extensionChecksum(s) {
+    const length = s.length;
+    let sum = 0;
+    for (let i = length - 2; i >= 0; i -= 2) {
+      sum += parseInt(s.charAt(i));
     }
     sum *= 3;
-    for (int i = length - 1; i >= 0; i -= 2) {
-      sum += (int) s.charAt(i) - (int) '0';
+    for (let i = length - 1; i >= 0; i -= 2) {
+      sum += parseInt(s.charAt(i));
     }
     sum *= 3;
     return sum % 10;
   }
 
-  private static int determineCheckDigit(int lgPatternFound)
-      throws NotFoundException {
-    for (int d = 0; d < 10; d++) {
-      if (lgPatternFound == CHECK_DIGIT_ENCODINGS[d]) {
+  static determineCheckDigit(lgPatternFound) {
+    for (let d = 0; d < 10; d++) {
+      if (lgPatternFound === CHECK_DIGIT_ENCODINGS[d]) {
         return d;
       }
     }
@@ -129,53 +124,51 @@ final class UPCEANExtension5Support {
    * @return formatted interpretation of raw content as a {@link Map} mapping
    *  one {@link ResultMetadataType} to appropriate value, or {@code null} if not known
    */
-  private static Map<ResultMetadataType,Object> parseExtensionString(String raw) {
-    if (raw.length() != 5) {
+  static parseExtensionString(raw) {
+    if (raw.length != 5) {
       return null;
     }
-    Object value = parseExtension5String(raw);
-    if (value == null) {
+    const value = UPCEANExtension5Support.parseExtension5String(raw);
+    if (!value) {
       return null;
     }
-    Map<ResultMetadataType,Object> result = new EnumMap<>(ResultMetadataType.class);
-    result.put(ResultMetadataType.SUGGESTED_PRICE, value);
+    const result = {};
+    result[ResultMetadataType.SUGGESTED_PRICE] = value;
     return result;
   }
 
-  private static String parseExtension5String(String raw) {
-    String currency;
+  static parseExtension5String(raw) {
+    let currency;
     switch (raw.charAt(0)) {
       case '0':
-        currency = "£";
+        currency = '£';
         break;
       case '5':
-        currency = "$";
+        currency = '$';
         break;
       case '9':
         // Reference: http://www.jollytech.com
-        if ("90000".equals(raw)) {
+        if ('90000'.equals(raw)) {
           // No suggested retail price
           return null;
         }
-        if ("99991".equals(raw)) {
+        if ('99991'.equals(raw)) {
           // Complementary
-          return "0.00";
+          return '0.00';
         }
-        if ("99990".equals(raw)) {
-          return "Used";
+        if ('99990'.equals(raw)) {
+          return 'Used';
         }
         // Otherwise... unknown currency?
-        currency = "";
+        currency = '';
         break;
       default:
-        currency = "";
+        currency = '';
         break;
     }
-    int rawAmount = Integer.parseInt(raw.substring(1));
-    String unitsString = String.valueOf(rawAmount / 100);
-    int hundredths = rawAmount % 100;
-    String hundredthsString = hundredths < 10 ? "0" + hundredths : String.valueOf(hundredths);
-    return currency + unitsString + '.' + hundredthsString;
+    const rawAmount = parseInt(raw.substring(1));
+    const floatingAmount = rawAmount / 100;
+    return currency + floatingAmount.toFixed(2);
   }
 
 }

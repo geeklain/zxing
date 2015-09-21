@@ -14,7 +14,6 @@
  * limitations under the License.
  */
 
-package com.google.zxing.common.reedsolomon;
 
 /**
  * <p>Thrown when an exception occurs during Reed-Solomon decoding, such as when
@@ -22,9 +21,9 @@ package com.google.zxing.common.reedsolomon;
  *
  * @author Sean Owen
  */
-public final class ReedSolomonException extends Exception {
+export default class ReedSolomonException extends Error {
 
-  public ReedSolomonException(String message) {
+  constructor(message) {
     super(message);
   }
 

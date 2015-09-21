@@ -1,9 +1,15 @@
 import Uint8RGBLuminanceSource from './Uint8RGBLuminanceSource';
 import GlobalHistogramBinarizer from './common/GlobalHistogramBinarizer';
 import BinaryBitmap from './BinaryBitmap';
-import Code128Reader from './oned/Code128Reader';
-import Code128Writer from './oned/Code128Writer';
+//import Code128Reader from './oned/Code128Reader';
+//import Code128Writer from './oned/Code128Writer';
+//import QRCodeReader from './qrcode/QRCodeReader';
+//import QRCodeWriter from './qrcode/QRCodeWriter';
+import UPCAReader from './oned/EAN13Reader';
+import UPCAWriter from './oned/EAN13Writer';
 import BarcodeFormat from './BarcodeFormat';
+import EncodeHintType from './EncodeHintType';
+//import DecodeHintType from './DecodeHintType';
 
 let container;
 
@@ -29,10 +35,12 @@ function processImage(imgSrc) {
       const luminanceSource = new Uint8RGBLuminanceSource(width, height, pixels);
       const binarizer = new GlobalHistogramBinarizer(luminanceSource);
       const binaryBitmap = new BinaryBitmap(binarizer);
-      const reader = new Code128Reader();
+      const reader = new UPCAReader();
 
       try {
-        const result = reader.decode(binaryBitmap);
+        const hints = {};
+        //hints[DecodeHintType.PURE_BARCODE] = true;
+        const result = reader.decode(binaryBitmap, hints);
         const t1 = performance.now();
 
         /*eslint-disable no-console */
@@ -67,13 +75,7 @@ function processLocalImage(e) {
             container.insertBefore(p, container.firstChild);
           })
     .then(function (code) {
-            const p = document.createElement('p');
-            p.innerHTML = 'Code found: ' + code;
-            container.insertBefore(p, container.firstChild);
-
-            const bitMatrix = new Code128Writer().encode(code, BarcodeFormat.CODE_128, 450, 100);
-
-            writeMatrixToCanvas(bitMatrix);
+            processText(code);
           })
     .catch(function (e) {
             /*eslint-disable no-console */
@@ -131,16 +133,32 @@ function writeMatrixToCanvas(matrix) {
 
 function doRandomTest() {
 
-  const possible = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789 _-';
+  //const possible = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789 _-';
+  const possible = '0123456789';
   const result = [];
 
-  for (var i = 0; i < 20; i++) {
+  let length = 12;
+  for (var i = 0; i < length; i++) {
     result.push(possible.charAt(Math.floor(Math.random() * possible.length)));
   }
+  
+  length++;
+  let sum = 0;
+  for (let i = length - 2; i >= 0; i -= 2) {
+    const digit = parseInt(result[i]);
+    sum += digit;
+  }
+  sum *= 3;
+  for (let i = length - 3; i >= 0; i -= 2) {
+    const digit = parseInt(result[i]);
+    sum += digit;
+  }
+  result.push((10 - (sum % 10)) % 10);
 
   const randomStr = result.join('');
   processText(randomStr);
 }
+
 function processInputText(e) {
   processText(e.target.value);
 }
@@ -150,7 +168,9 @@ function processText(text) {
   p.innerHTML = 'Code: ' + text;
   container.insertBefore(p, container.firstChild);
 
-  const bitMatrix = new Code128Writer().encode(text, BarcodeFormat.CODE_128, 600, 100);
+  const hints = {};
+  hints[EncodeHintType.MARGIN] = 10;
+  const bitMatrix = new UPCAWriter().encode(text, BarcodeFormat.EAN_13, 300, 100, hints);
 
   writeMatrixToCanvas(bitMatrix);
 }

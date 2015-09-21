@@ -14,9 +14,12 @@
  * limitations under the License.
  */
 
-package com.google.zxing.common;
+import BitMatrix from './BitMatrix';
+import PerspectiveTransform from './PerspectiveTransform';
 
-import com.google.zxing.NotFoundException;
+import NotFoundException from '../NotFoundException';
+
+let GRID_SAMPLER;
 
 /**
  * Implementations of this class can, given locations of finder patterns for a QR code in an
@@ -31,9 +34,8 @@ import com.google.zxing.NotFoundException;
  *
  * @author Sean Owen
  */
-public abstract class GridSampler {
+export default class GridSampler {
 
-  private static GridSampler gridSampler = new DefaultGridSampler();
 
   /**
    * Sets the implementation of GridSampler used by the library. One global
@@ -44,62 +46,16 @@ public abstract class GridSampler {
    * 
    * @param newGridSampler The platform-specific object to install.
    */
-  public static void setGridSampler(GridSampler newGridSampler) {
-    gridSampler = newGridSampler;
+  static setGridSampler(newGridSampler) {
+    GRID_SAMPLER = newGridSampler;
   }
 
   /**
    * @return the current implementation of GridSampler
    */
-  public static GridSampler getInstance() {
-    return gridSampler;
+  static getInstance() {
+    return GRID_SAMPLER;
   }
-
-  /**
-   * Samples an image for a rectangular matrix of bits of the given dimension. The sampling
-   * transformation is determined by the coordinates of 4 points, in the original and transformed
-   * image space.
-   *
-   * @param image image to sample
-   * @param dimensionX width of {@link BitMatrix} to sample from image
-   * @param dimensionY height of {@link BitMatrix} to sample from image
-   * @param p1ToX point 1 preimage X
-   * @param p1ToY point 1 preimage Y
-   * @param p2ToX point 2 preimage X
-   * @param p2ToY point 2 preimage Y
-   * @param p3ToX point 3 preimage X
-   * @param p3ToY point 3 preimage Y
-   * @param p4ToX point 4 preimage X
-   * @param p4ToY point 4 preimage Y
-   * @param p1FromX point 1 image X
-   * @param p1FromY point 1 image Y
-   * @param p2FromX point 2 image X
-   * @param p2FromY point 2 image Y
-   * @param p3FromX point 3 image X
-   * @param p3FromY point 3 image Y
-   * @param p4FromX point 4 image X
-   * @param p4FromY point 4 image Y
-   * @return {@link BitMatrix} representing a grid of points sampled from the image within a region
-   *   defined by the "from" parameters
-   * @throws NotFoundException if image can't be sampled, for example, if the transformation defined
-   *   by the given points is invalid or results in sampling outside the image boundaries
-   */
-  public abstract BitMatrix sampleGrid(BitMatrix image,
-                                       int dimensionX,
-                                       int dimensionY,
-                                       float p1ToX, float p1ToY,
-                                       float p2ToX, float p2ToY,
-                                       float p3ToX, float p3ToY,
-                                       float p4ToX, float p4ToY,
-                                       float p1FromX, float p1FromY,
-                                       float p2FromX, float p2FromY,
-                                       float p3FromX, float p3FromY,
-                                       float p4FromX, float p4FromY) throws NotFoundException;
-  
-  public abstract BitMatrix sampleGrid(BitMatrix image,
-                                       int dimensionX,
-                                       int dimensionY,
-                                       PerspectiveTransform transform) throws NotFoundException;
 
   /**
    * <p>Checks a set of points that have been transformed to sample points on an image against
@@ -116,58 +72,129 @@ public abstract class GridSampler {
    * @param points actual points in x1,y1,...,xn,yn form
    * @throws NotFoundException if an endpoint is lies outside the image boundaries
    */
-  protected static void checkAndNudgePoints(BitMatrix image,
-                                            float[] points) throws NotFoundException {
-    int width = image.getWidth();
-    int height = image.getHeight();
+  static checkAndNudgePoints(image, points) {
+    const width = image.getWidth();
+    const height = image.getHeight();
     // Check and nudge points from start until we see some that are OK:
-    boolean nudged = true;
-    for (int offset = 0; offset < points.length && nudged; offset += 2) {
-      int x = (int) points[offset];
-      int y = (int) points[offset + 1];
+    let nudged = true;
+    for (let offset = 0; offset < points.length && nudged; offset += 2) {
+      const x = Math.floor(points[offset]);
+      const y = Math.floor(points[offset + 1]);
       if (x < -1 || x > width || y < -1 || y > height) {
         throw NotFoundException.getNotFoundInstance();
       }
       nudged = false;
-      if (x == -1) {
-        points[offset] = 0.0f;
+      if (x === -1) {
+        points[offset] = 0.0;
         nudged = true;
-      } else if (x == width) {
+      }
+      else if (x === width) {
         points[offset] = width - 1;
         nudged = true;
       }
-      if (y == -1) {
-        points[offset + 1] = 0.0f;
+      if (y === -1) {
+        points[offset + 1] = 0.0;
         nudged = true;
-      } else if (y == height) {
+      }
+      else if (y === height) {
         points[offset + 1] = height - 1;
         nudged = true;
       }
     }
     // Check and nudge points from end:
     nudged = true;
-    for (int offset = points.length - 2; offset >= 0 && nudged; offset -= 2) {
-      int x = (int) points[offset];
-      int y = (int) points[offset + 1];
+    for (let offset = points.length - 2; offset >= 0 && nudged; offset -= 2) {
+      const x = Math.floor(points[offset]);
+      const y = Math.floor(points[offset + 1]);
       if (x < -1 || x > width || y < -1 || y > height) {
         throw NotFoundException.getNotFoundInstance();
       }
       nudged = false;
-      if (x == -1) {
-        points[offset] = 0.0f;
+      if (x === -1) {
+        points[offset] = 0.0;
         nudged = true;
-      } else if (x == width) {
+      }
+      else if (x === width) {
         points[offset] = width - 1;
         nudged = true;
       }
-      if (y == -1) {
-        points[offset + 1] = 0.0f;
+      if (y === -1) {
+        points[offset + 1] = 0.0;
         nudged = true;
-      } else if (y == height) {
+      }
+      else if (y === height) {
         points[offset + 1] = height - 1;
         nudged = true;
       }
     }
   }
-
 }
+
+/**
+ * @author Sean Owen
+ */
+class DefaultGridSampler extends GridSampler {
+
+  sampleGrid(image,
+    dimensionX,
+    dimensionY,
+    p1ToX, p1ToY,
+    p2ToX, p2ToY,
+    p3ToX, p3ToY,
+    p4ToX, p4ToY,
+    p1FromX, p1FromY,
+    p2FromX, p2FromY,
+    p3FromX, p3FromY,
+    p4FromX, p4FromY) {
+
+    const transform = PerspectiveTransform.quadrilateralToQuadrilateral(
+      p1ToX, p1ToY, p2ToX, p2ToY, p3ToX, p3ToY, p4ToX, p4ToY,
+      p1FromX, p1FromY, p2FromX, p2FromY, p3FromX, p3FromY, p4FromX, p4FromY);
+
+    return this.sampleGrid(image, dimensionX, dimensionY, transform);
+  }
+
+  sampleGrid(image,
+    dimensionX,
+    dimensionY,
+    transform) {
+    if (dimensionX <= 0 || dimensionY <= 0) {
+      throw NotFoundException.getNotFoundInstance();
+    }
+    const bits = new BitMatrix(dimensionX, dimensionY);
+    const points = new Float32Array(2 * dimensionX);
+    for (let y = 0; y < dimensionY; y++) {
+      const max = points.length;
+      const iValue = y + 0.5;
+      for (let x = 0; x < max; x += 2) {
+        points[x] = (x / 2) + 0.5;
+        points[x + 1] = iValue;
+      }
+      transform.transformPoints(points);
+      // Quick check to see if points transformed to something inside the image;
+      // sufficient to check the endpoints
+      DefaultGridSampler.checkAndNudgePoints(image, points);
+      try {
+        for (let x = 0; x < max; x += 2) {
+          if (image.get(Math.floor(points[x]), Math.floor(points[x + 1]))) {
+            // Black(-ish) pixel
+            bits.set(x / 2, y);
+          }
+        }
+      }
+      catch (e) {
+        // This feels wrong, but, sometimes if the finder patterns are misidentified, the resulting
+        // transform gets "twisted" such that it maps a straight line of points to a set of points
+        // whose endpoints are in bounds, but others are not. There is probably some mathematical
+        // way to detect this about the transformation that I don't know yet.
+        // This results in an ugly runtime exception despite our clever checks above -- can't have
+        // that. We could check each point's coordinates but that feels duplicative. We settle for
+        // catching and wrapping ArrayIndexOutOfBoundsException.
+        throw NotFoundException.getNotFoundInstance();
+      }
+    }
+    return bits;
+  }
+}
+
+GRID_SAMPLER = new DefaultGridSampler();

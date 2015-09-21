@@ -4,7 +4,7 @@ module.exports = {
   ],
   output: {
     path: './resources',
-    publicPath: '/',
+    publicPath: '/app',
     filename: 'bundle.js'
   },
   module: {
@@ -27,6 +27,6 @@ module.exports = {
   devtool: 'source-map',
   devServer: {
     contentBase: './resources',
-    port: 8181
+    port: 8080
   }
 };

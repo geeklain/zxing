@@ -165,9 +165,8 @@ export default class Code128Reader extends OneDReader {
     const rowOffset = row.getNextSet(0);
 
     let counterPosition = 0;
-    const counters = Array.apply(null, Array(6)).map(function () {
-      return 0;
-    });
+    const counters = new Int32Array(6);
+    
     let patternStart = rowOffset;
     let isWhite = false;
     const patternLength = 6;
@@ -261,10 +260,8 @@ export default class Code128Reader extends OneDReader {
 
     let lastStart = startPatternInfo[0];
     let nextStart = startPatternInfo[1];
-    const counters = Array.apply(null, Array(6)).map(function () {
-      return 0;
-    });
-
+    const counters = new Int32Array(6);
+    
     let lastCode = 0;
     let code = 0;
     let checksumTotal = startCode;

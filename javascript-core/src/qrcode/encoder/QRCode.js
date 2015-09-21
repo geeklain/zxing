@@ -14,95 +14,84 @@
  * limitations under the License.
  */
 
-package com.google.zxing.qrcode.encoder;
-
-import com.google.zxing.qrcode.decoder.ErrorCorrectionLevel;
-import com.google.zxing.qrcode.decoder.Mode;
-import com.google.zxing.qrcode.decoder.Version;
-
 /**
  * @author satorux@google.com (Satoru Takabayashi) - creator
  * @author dswitkin@google.com (Daniel Switkin) - ported from C++
  */
-public final class QRCode {
+export default class QRCode {
 
-  public static final int NUM_MASK_PATTERNS = 8;
-
-  private Mode mode;
-  private ErrorCorrectionLevel ecLevel;
-  private Version version;
-  private int maskPattern;
-  private ByteMatrix matrix;
-
-  public QRCode() {
-    maskPattern = -1;
+  constructor() {
+    this.maskPattern = -1;
   }
 
-  public Mode getMode() {
-    return mode;
+  getMode() {
+    return this.mode;
   }
 
-  public ErrorCorrectionLevel getECLevel() {
-    return ecLevel;
+  getECLevel() {
+    return this.ecLevel;
   }
 
-  public Version getVersion() {
-    return version;
+  getVersion() {
+    return this.version;
   }
 
-  public int getMaskPattern() {
-    return maskPattern;
+  getMaskPattern() {
+    return this.maskPattern;
   }
 
-  public ByteMatrix getMatrix() {
-    return matrix;
+  getMatrix() {
+    return this.matrix;
   }
 
-  @Override
-  public String toString() {
-    StringBuilder result = new StringBuilder(200);
-    result.append("<<\n");
-    result.append(" mode: ");
-    result.append(mode);
-    result.append("\n ecLevel: ");
-    result.append(ecLevel);
-    result.append("\n version: ");
-    result.append(version);
-    result.append("\n maskPattern: ");
-    result.append(maskPattern);
-    if (matrix == null) {
-      result.append("\n matrix: null\n");
-    } else {
-      result.append("\n matrix:\n");
-      result.append(matrix);
+  toString() {
+    const result = new Array(200);
+    result.push('<<\n');
+    result.push(' this.mode: ');
+    result.push(this.mode);
+    result.push('\n this.ecLevel: ');
+    result.push(this.ecLevel);
+    result.push('\n this.version: ');
+    result.push(this.version);
+    result.push('\n this.maskPattern: ');
+    result.push(this.maskPattern);
+    if (this.matrix == null) {
+      result.push('\n this.matrix: null\n');
     }
-    result.append(">>\n");
-    return result.toString();
+    else {
+      result.push('\n this.matrix:\n');
+      result.push(this.matrix);
+    }
+    result.push('>>\n');
+    return result.join('');
   }
 
-  public void setMode(Mode value) {
-    mode = value;
+  setMode(value) {
+    this.mode = value;
   }
 
-  public void setECLevel(ErrorCorrectionLevel value) {
-    ecLevel = value;
+  setECLevel(value) {
+    this.ecLevel = value;
   }
 
-  public void setVersion(Version version) {
+  setVersion(version) {
     this.version = version;
   }
 
-  public void setMaskPattern(int value) {
-    maskPattern = value;
+  setMaskPattern(value) {
+    this.maskPattern = value;
   }
 
-  public void setMatrix(ByteMatrix value) {
-    matrix = value;
+  setMatrix(value) {
+    this.matrix = value;
   }
 
   // Check if "mask_pattern" is valid.
-  public static boolean isValidMaskPattern(int maskPattern) {
-    return maskPattern >= 0 && maskPattern < NUM_MASK_PATTERNS;
+  static isValidMaskPattern(maskPattern) {
+    return maskPattern >= 0 && maskPattern < QRCode.NUM_MASK_PATTERNS;
   }
 
 }
+
+QRCode.NUM_MASK_PATTERNS = 8;
+

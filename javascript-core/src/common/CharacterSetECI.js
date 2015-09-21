@@ -14,12 +14,9 @@
  * limitations under the License.
  */
 
-package com.google.zxing.common;
+import FormatException from '../FormatException';
 
-import com.google.zxing.FormatException;
-
-import java.util.HashMap;
-import java.util.Map;
+const VALUE_TO_ECI = {};
 
 /**
  * Encapsulates a Character Set ECI, according to "Extended Channel Interpretations" 5.3.1.1
@@ -27,70 +24,19 @@ import java.util.Map;
  *
  * @author Sean Owen
  */
-public enum CharacterSetECI {
+export default class CharacterSetECI {
 
-  // Enum name is a Java encoding valid for java.lang and java.io
-  Cp437(new int[]{0,2}),
-  ISO8859_1(new int[]{1,3}, "ISO-8859-1"),
-  ISO8859_2(4, "ISO-8859-2"),
-  ISO8859_3(5, "ISO-8859-3"),
-  ISO8859_4(6, "ISO-8859-4"),
-  ISO8859_5(7, "ISO-8859-5"),
-  ISO8859_6(8, "ISO-8859-6"),
-  ISO8859_7(9, "ISO-8859-7"),
-  ISO8859_8(10, "ISO-8859-8"),
-  ISO8859_9(11, "ISO-8859-9"),
-  ISO8859_10(12, "ISO-8859-10"),
-  ISO8859_11(13, "ISO-8859-11"),
-  ISO8859_13(15, "ISO-8859-13"),
-  ISO8859_14(16, "ISO-8859-14"),
-  ISO8859_15(17, "ISO-8859-15"),
-  ISO8859_16(18, "ISO-8859-16"),
-  SJIS(20, "Shift_JIS"),
-  Cp1250(21, "windows-1250"),
-  Cp1251(22, "windows-1251"),
-  Cp1252(23, "windows-1252"),
-  Cp1256(24, "windows-1256"),
-  UnicodeBigUnmarked(25, "UTF-16BE", "UnicodeBig"),
-  UTF8(26, "UTF-8"),
-  ASCII(new int[] {27, 170}, "US-ASCII"),
-  Big5(28),
-  GB18030(29, "GB2312", "EUC_CN", "GBK"),
-  EUC_KR(30, "EUC-KR");
-
-  private static final Map<Integer,CharacterSetECI> VALUE_TO_ECI = new HashMap<>();
-  private static final Map<String,CharacterSetECI> NAME_TO_ECI = new HashMap<>();
-  static {
-    for (CharacterSetECI eci : values()) {
-      for (int value : eci.values) {
-        VALUE_TO_ECI.put(value, eci);
-      }
-      NAME_TO_ECI.put(eci.name(), eci);
-      for (String name : eci.otherEncodingNames) {
-        NAME_TO_ECI.put(name, eci);
-      }
-    }
-  }
-
-  private final int[] values;
-  private final String[] otherEncodingNames;
-
-  CharacterSetECI(int value) {
-    this(new int[] {value});
-  }
-  
-  CharacterSetECI(int value, String... otherEncodingNames) {
-    this.values = new int[] {value};
-    this.otherEncodingNames = otherEncodingNames;
-  }
-
-  CharacterSetECI(int[] values, String... otherEncodingNames) {
+  constructor(values, ...otherEncodingNames) {
     this.values = values;
     this.otherEncodingNames = otherEncodingNames;
+    
+    values.forEach(function(value) {
+      VALUE_TO_ECI[value] = this;
+    });
   }
 
-  public int getValue() {
-    return values[0];
+  getValue() {
+    return this.values[0];
   }
 
   /**
@@ -99,20 +45,38 @@ public enum CharacterSetECI {
    *   unsupported
    * @throws FormatException if ECI value is invalid
    */
-  public static CharacterSetECI getCharacterSetECIByValue(int value) throws FormatException {
+  static getCharacterSetECIByValue(value) {
     if (value < 0 || value >= 900) {
       throw FormatException.getFormatInstance();
     }
-    return VALUE_TO_ECI.get(value);
+    return VALUE_TO_ECI[value];
   }
-
-  /**
-   * @param name character set ECI encoding name
-   * @return CharacterSetECI representing ECI for character encoding, or null if it is legal
-   *   but unsupported
-   */
-  public static CharacterSetECI getCharacterSetECIByName(String name) {
-    return NAME_TO_ECI.get(name);
-  }
-
 }
+
+export const Cp437 = new CharacterSetECI([0, 2]);
+export const ISO8859_1 = new CharacterSetECI([1, 3], 'ISO-8859-1');
+export const ISO8859_2 = new CharacterSetECI([4], 'ISO-8859-2');
+export const ISO8859_3 = new CharacterSetECI([5], 'ISO-8859-3');
+export const ISO8859_4 = new CharacterSetECI([6], 'ISO-8859-4');
+export const ISO8859_5 = new CharacterSetECI([7], 'ISO-8859-5');
+export const ISO8859_6 = new CharacterSetECI([8], 'ISO-8859-6');
+export const ISO8859_7 = new CharacterSetECI([9], 'ISO-8859-7');
+export const ISO8859_8 = new CharacterSetECI([10], 'ISO-8859-8');
+export const ISO8859_9 = new CharacterSetECI([11], 'ISO-8859-9');
+export const ISO8859_10 = new CharacterSetECI([12], 'ISO-8859-10');
+export const ISO8859_11 = new CharacterSetECI([13], 'ISO-8859-11');
+export const ISO8859_13 = new CharacterSetECI([15], 'ISO-8859-13');
+export const ISO8859_14 = new CharacterSetECI([16], 'ISO-8859-14');
+export const ISO8859_15 = new CharacterSetECI([17], 'ISO-8859-15');
+export const ISO8859_16 = new CharacterSetECI([18], 'ISO-8859-16');
+export const SJIS = new CharacterSetECI([20], 'Shift_JIS');
+export const Cp1250 = new CharacterSetECI([21], 'windows-1250');
+export const Cp1251 = new CharacterSetECI([22], 'windows-1251');
+export const Cp1252 = new CharacterSetECI([23], 'windows-1252');
+export const Cp1256 = new CharacterSetECI([24], 'windows-1256');
+export const UnicodeBigUnmarked = new CharacterSetECI([25], 'UTF-16BE', 'UnicodeBig');
+export const UTF8 = new CharacterSetECI([26], 'UTF-8');
+export const ASCII = new CharacterSetECI([27, 170], 'US-ASCII');
+export const Big5 = new CharacterSetECI([28]);
+export const GB18030 = new CharacterSetECI([29], 'GB2312', 'EUC_CN', 'GBK');
+export const EUC_KR = new CharacterSetECI([30], 'EUC-KR');

@@ -14,10 +14,6 @@
  * limitations under the License.
  */
 
-package com.google.zxing.common;
-
-import java.util.List;
-
 /**
  * <p>Encapsulates the result of decoding a matrix of bits. This typically
  * applies to 2D barcode formats. For now it contains the raw bytes obtained,
@@ -25,89 +21,75 @@ import java.util.List;
  *
  * @author Sean Owen
  */
-public final class DecoderResult {
+export default class DecoderResult {
 
-  private final byte[] rawBytes;
-  private final String text;
-  private final List<byte[]> byteSegments;
-  private final String ecLevel;
-  private Integer errorsCorrected;
-  private Integer erasures;
-  private Object other;
-  private final int structuredAppendParity;
-  private final int structuredAppendSequenceNumber;
-
-  public DecoderResult(byte[] rawBytes,
-                       String text,
-                       List<byte[]> byteSegments,
-                       String ecLevel) {
-    this(rawBytes, text, byteSegments, ecLevel, -1, -1);
-  }
-
-  public DecoderResult(byte[] rawBytes,
-                       String text,
-                       List<byte[]> byteSegments,
-                       String ecLevel,
-                       int saSequence,
-                       int saParity) {
+  constructor(rawBytes,
+              text,
+              byteSegments,
+              ecLevel,
+              saSequence = -1,
+              saParity = -1) {
+                
     this.rawBytes = rawBytes;
     this.text = text;
     this.byteSegments = byteSegments;
     this.ecLevel = ecLevel;
+    this.errorsCorrected = null;
+    this.erasures = null;
+    this.other = null;
     this.structuredAppendParity = saParity;
     this.structuredAppendSequenceNumber = saSequence;
   }
 
-  public byte[] getRawBytes() {
-    return rawBytes;
+  getRawBytes() {
+    return this.rawBytes;
   }
 
-  public String getText() {
-    return text;
+  getText() {
+    return this.text;
   }
 
-  public List<byte[]> getByteSegments() {
-    return byteSegments;
+  getByteSegments() {
+    return this.byteSegments;
   }
 
-  public String getECLevel() {
-    return ecLevel;
+  getECLevel() {
+    return this.ecLevel;
   }
 
-  public Integer getErrorsCorrected() {
-    return errorsCorrected;
+  getErrorsCorrected() {
+    return this.errorsCorrected;
   }
 
-  public void setErrorsCorrected(Integer errorsCorrected) {
+  setErrorsCorrected(errorsCorrected) {
     this.errorsCorrected = errorsCorrected;
   }
 
-  public Integer getErasures() {
-    return erasures;
+  getErasures() {
+    return this.erasures;
   }
 
-  public void setErasures(Integer erasures) {
+  setErasures(erasures) {
     this.erasures = erasures;
   }
   
-  public Object getOther() {
-    return other;
+  getOther() {
+    return this.other;
   }
 
-  public void setOther(Object other) {
+  setOther(other) {
     this.other = other;
   }
   
-  public boolean hasStructuredAppend() {
-    return structuredAppendParity >= 0 && structuredAppendSequenceNumber >= 0;
+  hasStructuredAppend() {
+    return this.structuredAppendParity >= 0 && this.structuredAppendSequenceNumber >= 0;
   }
   
-  public int getStructuredAppendParity() {
-    return structuredAppendParity;
+  getStructuredAppendParity() {
+    return this.structuredAppendParity;
   }
   
-  public int getStructuredAppendSequenceNumber() {
-    return structuredAppendSequenceNumber;
+  getStructuredAppendSequenceNumber() {
+    return this.structuredAppendSequenceNumber;
   }
-  
 }

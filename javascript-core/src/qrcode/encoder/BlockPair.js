@@ -14,24 +14,18 @@
  * limitations under the License.
  */
 
-package com.google.zxing.qrcode.encoder;
+export default class BlockPair {
 
-final class BlockPair {
-
-  private final byte[] dataBytes;
-  private final byte[] errorCorrectionBytes;
-
-  BlockPair(byte[] data, byte[] errorCorrection) {
-    dataBytes = data;
-    errorCorrectionBytes = errorCorrection;
+  constructor(data, errorCorrection) {
+    this.dataBytes = data;
+    this.errorCorrectionBytes = errorCorrection;
   }
 
-  public byte[] getDataBytes() {
-    return dataBytes;
+  getDataBytes() {
+    return this.dataBytes;
   }
 
-  public byte[] getErrorCorrectionBytes() {
-    return errorCorrectionBytes;
+  getErrorCorrectionBytes() {
+    return this.errorCorrectionBytes;
   }
-
 }

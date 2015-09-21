@@ -14,7 +14,8 @@
  * limitations under the License.
  */
 
-package com.google.zxing.oned;
+import OneDimensionalCodeWriter from './OneDimensionalCodeWriter';
+import {START_END_PATTERN} from './UPCEANReader';
 
 /**
  * <p>Encapsulates functionality and implementation that is common to UPC and EAN families
@@ -23,12 +24,11 @@ package com.google.zxing.oned;
  * @author aripollak@gmail.com (Ari Pollak)
  * @author dsbnatut@gmail.com (Kazuki Nishiura)
  */
-public abstract class UPCEANWriter extends OneDimensionalCodeWriter {
+export default class UPCEANWriter extends OneDimensionalCodeWriter {
 
-  @Override
-  public int getDefaultMargin() {
+  getDefaultMargin() {
     // Use a different default more appropriate for UPC/EAN
-    return UPCEANReader.START_END_PATTERN.length;
+    return START_END_PATTERN.length;
   }
 
 }
