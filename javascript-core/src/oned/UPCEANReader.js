@@ -248,7 +248,7 @@ export default class UPCEANReader extends OneDReader {
 
     let sum = 0;
     for (let i = length - 2; i >= 0; i -= 2) {
-      const digit = parseInt(s.charAt(i));
+      const digit = Number.parseInt(s.charAt(i));
       if (digit < 0 || digit > 9) {
         throw FormatException.getFormatInstance();
       }
@@ -256,7 +256,7 @@ export default class UPCEANReader extends OneDReader {
     }
     sum *= 3;
     for (let i = length - 1; i >= 0; i -= 2) {
-      const digit = parseInt(s.charAt(i));
+      const digit = Number.parseInt(s.charAt(i));
       if (digit < 0 || digit > 9) {
         throw FormatException.getFormatInstance();
       }

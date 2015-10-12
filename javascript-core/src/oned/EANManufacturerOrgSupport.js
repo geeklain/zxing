@@ -32,7 +32,7 @@ export default class EANManufacturerOrgSupport {
 
   lookupCountryIdentifier(productCode) {
     this.initIfNeeded();
-    const prefix = parseInt(productCode.substring(0, 3));
+    const prefix = Number.parseInt(productCode.substring(0, 3));
     const max = this.ranges.length;
     for (let i = 0; i < max; i++) {
       const range = this.ranges[i];

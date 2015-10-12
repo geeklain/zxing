@@ -114,7 +114,7 @@ export default class Code128Writer extends OneDimensionalCodeWriter {
             if (codeSet === CODE_CODE_B) {
               patternIndex = contents.charCodeAt(position) - 32;
             } else { // CODE_CODE_C
-              patternIndex = parseInt(contents.substring(position, position + 2));
+              patternIndex = Number.parseInt(contents.substring(position, position + 2));
               position++; // Also incremented below
             }
         }

@@ -84,7 +84,7 @@ export default class UPCEANExtension2Support {
       throw NotFoundException.getNotFoundInstance();
     }
 
-    if (parseInt(resultString.join('')) % 4 !== checkParity) {
+    if (Number.parseInt(resultString.join('')) % 4 !== checkParity) {
       throw NotFoundException.getNotFoundInstance();
     }
 
@@ -101,7 +101,7 @@ export default class UPCEANExtension2Support {
       return null;
     }
     const result = {};
-    result[ResultMetadataType.ISSUE_NUMBER] = parseInt(raw);
+    result[ResultMetadataType.ISSUE_NUMBER] = Number.parseInt(raw);
     return result;
   }
 

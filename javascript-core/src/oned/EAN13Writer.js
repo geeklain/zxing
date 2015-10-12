@@ -56,7 +56,7 @@ export default class EAN13Writer extends UPCEANWriter {
       throw new IllegalArgumentException('Illegal contents');
     }
 
-    const firstDigit = parseInt(contents.substring(0, 1));
+    const firstDigit = Number.parseInt(contents.substring(0, 1));
     const parities = FIRST_DIGIT_ENCODINGS[firstDigit];
     const result = new Array(CODE_WIDTH);
     let pos = 0;
@@ -65,7 +65,7 @@ export default class EAN13Writer extends UPCEANWriter {
 
     // See {@link #EAN13Reader} for a description of how the first digit & left bars are encoded
     for (let i = 1; i <= 6; i++) {
-      let digit = parseInt(contents.substring(i, i + 1));
+      let digit = Number.parseInt(contents.substring(i, i + 1));
       if ((parities >> (6 - i) & 1) === 1) {
         digit += 10;
       }
@@ -75,7 +75,7 @@ export default class EAN13Writer extends UPCEANWriter {
     pos += EAN13Writer.appendPattern(result, pos, MIDDLE_PATTERN, false);
 
     for (let i = 7; i <= 12; i++) {
-      let digit = parseInt(contents.substring(i, i + 1));
+      let digit = Number.parseInt(contents.substring(i, i + 1));
       pos += EAN13Writer.appendPattern(result, pos, L_PATTERNS[digit], true);
     }
     EAN13Writer.appendPattern(result, pos, START_END_PATTERN, true);

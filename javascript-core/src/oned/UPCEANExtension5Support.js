@@ -100,11 +100,11 @@ export default class UPCEANExtension5Support {
     const length = s.length;
     let sum = 0;
     for (let i = length - 2; i >= 0; i -= 2) {
-      sum += parseInt(s.charAt(i));
+      sum += Number.parseInt(s.charAt(i));
     }
     sum *= 3;
     for (let i = length - 1; i >= 0; i -= 2) {
-      sum += parseInt(s.charAt(i));
+      sum += Number.parseInt(s.charAt(i));
     }
     sum *= 3;
     return sum % 10;
@@ -166,7 +166,7 @@ export default class UPCEANExtension5Support {
         currency = '';
         break;
     }
-    const rawAmount = parseInt(raw.substring(1));
+    const rawAmount = Number.parseInt(raw.substring(1));
     const floatingAmount = rawAmount / 100;
     return currency + floatingAmount.toFixed(2);
   }

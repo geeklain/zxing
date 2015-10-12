@@ -16,19 +16,6 @@
 
 package com.google.zxing.oned;
 
-import com.google.zxing.BarcodeFormat;
-import com.google.zxing.DecodeHintType;
-import com.google.zxing.NotFoundException;
-import com.google.zxing.Reader;
-import com.google.zxing.ReaderException;
-import com.google.zxing.Result;
-import com.google.zxing.common.BitArray;
-import com.google.zxing.oned.rss.RSS14Reader;
-import com.google.zxing.oned.rss.expanded.RSSExpandedReader;
-
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Map;
 
 /**
  * @author dswitkin@google.com (Daniel Switkin)

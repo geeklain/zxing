@@ -14,37 +14,29 @@
  * limitations under the License.
  */
 
-package com.google.zxing.oned;
+import UPCEANWriter from './UPCEANWriter';
+import {START_END_PATTERN, L_PATTERNS, MIDDLE_PATTERN} from './UPCEANReader';
 
-import com.google.zxing.BarcodeFormat;
-import com.google.zxing.EncodeHintType;
-import com.google.zxing.WriterException;
-import com.google.zxing.common.BitMatrix;
+import BarcodeFormat from '../BarcodeFormat';
 
-import java.util.Map;
+import IllegalArgumentException from '../IllegalArgumentException';
+
+const CODE_WIDTH = 3 + // start guard
+    (7 * 4) + // left bars
+    5 + // middle guard
+    (7 * 4) + // right bars
+    3; // end guard
 
 /**
  * This object renders an EAN8 code as a {@link BitMatrix}.
  *
  * @author aripollak@gmail.com (Ari Pollak)
  */
-public final class EAN8Writer extends UPCEANWriter {
+export default class EAN8Writer extends UPCEANWriter {
 
-  private static final int CODE_WIDTH = 3 + // start guard
-      (7 * 4) + // left bars
-      5 + // middle guard
-      (7 * 4) + // right bars
-      3; // end guard
-
-  @Override
-  public BitMatrix encode(String contents,
-                          BarcodeFormat format,
-                          int width,
-                          int height,
-                          Map<EncodeHintType,?> hints) throws WriterException {
-    if (format != BarcodeFormat.EAN_8) {
-      throw new IllegalArgumentException("Can only encode EAN_8, but got "
-          + format);
+  encode(contents, format, width, height, hints) {
+    if (format !== BarcodeFormat.EAN_8) {
+      throw new IllegalArgumentException('Can only encode EAN_8, but got ' + format);
     }
 
     return super.encode(contents, format, width, height, hints);
@@ -53,30 +45,29 @@ public final class EAN8Writer extends UPCEANWriter {
   /**
    * @return a byte array of horizontal pixels (false = white, true = black)
    */
-  @Override
-  public boolean[] encode(String contents) {
-    if (contents.length() != 8) {
+  doEncode(contents) {
+    if (contents.length !== 8) {
       throw new IllegalArgumentException(
-          "Requested contents should be 8 digits long, but got " + contents.length());
+          'Requested contents should be 8 digits long, but got' + contents.length);
     }
 
-    boolean[] result = new boolean[CODE_WIDTH];
-    int pos = 0;
+    const result = new Array(CODE_WIDTH);
+    let pos = 0;
 
-    pos += appendPattern(result, pos, UPCEANReader.START_END_PATTERN, true);
+    pos += EAN8Writer.appendPattern(result, pos, START_END_PATTERN, true);
 
-    for (int i = 0; i <= 3; i++) {
-      int digit = Integer.parseInt(contents.substring(i, i + 1));
-      pos += appendPattern(result, pos, UPCEANReader.L_PATTERNS[digit], false);
+    for (let i = 0; i <= 3; i++) {
+      const digit = Number.parseInt(contents.substring(i, i + 1));
+      pos += EAN8Writer.appendPattern(result, pos, L_PATTERNS[digit], false);
     }
 
-    pos += appendPattern(result, pos, UPCEANReader.MIDDLE_PATTERN, false);
+    pos += EAN8Writer.appendPattern(result, pos, MIDDLE_PATTERN, false);
 
-    for (int i = 4; i <= 7; i++) {
-      int digit = Integer.parseInt(contents.substring(i, i + 1));
-      pos += appendPattern(result, pos, UPCEANReader.L_PATTERNS[digit], true);
+    for (let i = 4; i <= 7; i++) {
+      const digit = Number.parseInt(contents.substring(i, i + 1));
+      pos += EAN8Writer.appendPattern(result, pos, L_PATTERNS[digit], true);
     }
-    appendPattern(result, pos, UPCEANReader.START_END_PATTERN, true);
+    EAN8Writer.appendPattern(result, pos, START_END_PATTERN, true);
 
     return result;
   }

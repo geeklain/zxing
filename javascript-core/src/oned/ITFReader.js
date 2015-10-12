@@ -13,18 +13,50 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+ 
+import OneDReader from './OneDReader';
 
-package com.google.zxing.oned;
+import BarcodeFormat from '../BarcodeFormat';
+import DecodeHintType from '../DecodeHintType';
+import Result from '../Result';
+import ResultPoint from '../ResultPoint';
 
-import com.google.zxing.BarcodeFormat;
-import com.google.zxing.DecodeHintType;
-import com.google.zxing.FormatException;
-import com.google.zxing.NotFoundException;
-import com.google.zxing.Result;
-import com.google.zxing.ResultPoint;
-import com.google.zxing.common.BitArray;
+import FormatException from '../FormatException';
+import NotFoundException from '../NotFoundException';
 
-import java.util.Map;
+const MAX_AVG_VARIANCE = 0.38;
+const MAX_INDIVIDUAL_VARIANCE = 0.78;
+
+const W = 3; // Pixel width of a wide line
+const N = 1; // Pixed width of a narrow line
+
+/** Valid ITF lengths. Anything longer than the largest value is also allowed. */
+const DEFAULT_ALLOWED_LENGTHS = Object.freeze([6, 8, 10, 12, 14]);
+
+/**
+ * Start/end guard pattern.
+ *
+ * Note: The end pattern is reversed because the row is reversed before
+ * searching for the END_PATTERN
+ */
+const START_PATTERN = Object.freeze([N, N, N, N]);
+const END_PATTERN_REVERSED = Object.freeze([N, N, W]);
+
+/**
+ * Patterns of Wide / Narrow lines to indicate each digit
+ */
+export const PATTERNS = Object.freeze([
+  Object.freeze([N, N, W, W, N]), // 0
+  Object.freeze([W, N, N, N, W]), // 1
+  Object.freeze([N, W, N, N, W]), // 2
+  Object.freeze([W, W, N, N, N]), // 3
+  Object.freeze([N, N, W, N, W]), // 4
+  Object.freeze([W, N, W, N, N]), // 5
+  Object.freeze([N, W, W, N, N]), // 6
+  Object.freeze([N, N, N, W, W]), // 7
+  Object.freeze([W, N, N, W, N]), // 8
+  Object.freeze([N, W, N, W, N]) // 9
+]);
 
 /**
  * <p>Implements decoding of the ITF format, or Interleaved Two of Five.</p>
@@ -42,80 +74,44 @@ import java.util.Map;
  *
  * @author kevin.osullivan@sita.aero, SITA Lab.
  */
-public final class ITFReader extends OneDReader {
+export default class ITFReader extends OneDReader {
 
-  private static final float MAX_AVG_VARIANCE = 0.38f;
-  private static final float MAX_INDIVIDUAL_VARIANCE = 0.78f;
+  constructor() {
+    super();
+    // Stores the actual narrow line width of the image being decoded.
+    this.narrowLineWidth = -1;
+  }
 
-  private static final int W = 3; // Pixel width of a wide line
-  private static final int N = 1; // Pixed width of a narrow line
-
-  /** Valid ITF lengths. Anything longer than the largest value is also allowed. */
-  private static final int[] DEFAULT_ALLOWED_LENGTHS = { 6, 8, 10, 12, 14 };
-
-  // Stores the actual narrow line width of the image being decoded.
-  private int narrowLineWidth = -1;
-
-  /**
-   * Start/end guard pattern.
-   *
-   * Note: The end pattern is reversed because the row is reversed before
-   * searching for the END_PATTERN
-   */
-  private static final int[] START_PATTERN = {N, N, N, N};
-  private static final int[] END_PATTERN_REVERSED = {N, N, W};
-
-  /**
-   * Patterns of Wide / Narrow lines to indicate each digit
-   */
-  static final int[][] PATTERNS = {
-      {N, N, W, W, N}, // 0
-      {W, N, N, N, W}, // 1
-      {N, W, N, N, W}, // 2
-      {W, W, N, N, N}, // 3
-      {N, N, W, N, W}, // 4
-      {W, N, W, N, N}, // 5
-      {N, W, W, N, N}, // 6
-      {N, N, N, W, W}, // 7
-      {W, N, N, W, N}, // 8
-      {N, W, N, W, N}  // 9
-  };
-
-  @Override
-  public Result decodeRow(int rowNumber, BitArray row, Map<DecodeHintType,?> hints)
-      throws FormatException, NotFoundException {
+  decodeRow(rowNumber, row, hints) {
 
     // Find out where the Middle section (payload) starts & ends
-    int[] startRange = decodeStart(row);
-    int[] endRange = decodeEnd(row);
+    const startRange = this.decodeStart(row);
+    const endRange = this.decodeEnd(row);
 
-    StringBuilder result = new StringBuilder(20);
-    decodeMiddle(row, startRange[1], endRange[0], result);
-    String resultString = result.toString();
+    const result = [];
+    ITFReader.decodeMiddle(row, startRange[1], endRange[0], result);
+    const resultString = result.join('');
 
-    int[] allowedLengths = null;
-    if (hints != null) {
-      allowedLengths = (int[]) hints.get(DecodeHintType.ALLOWED_LENGTHS);
-
+    let allowedLengths;
+    if (hints) {
+      allowedLengths = hints[DecodeHintType.ALLOWED_LENGTHS];
     }
-    if (allowedLengths == null) {
+    if (!allowedLengths) {
       allowedLengths = DEFAULT_ALLOWED_LENGTHS;
     }
 
     // To avoid false positives with 2D barcodes (and other patterns), make
     // an assumption that the decoded string must be a 'standard' length if it's short
-    int length = resultString.length();
-    boolean lengthOK = false;
-    int maxAllowedLength = 0;
-    for (int allowedLength : allowedLengths) {
-      if (length == allowedLength) {
-        lengthOK = true;
-        break;
+    const length = resultString.length;
+    let maxAllowedLength = 0;
+    let lengthOK = allowedLengths.some((allowedLength) => {
+      if (length === allowedLength) {
+        return true;
       }
       if (allowedLength > maxAllowedLength) {
         maxAllowedLength = allowedLength;
       }
-    }
+    });
     if (!lengthOK && length > maxAllowedLength) {
       lengthOK = true;
     }
@@ -124,11 +120,13 @@ public final class ITFReader extends OneDReader {
     }
 
     return new Result(
-        resultString,
-        null, // no natural byte representation for these barcodes
-        new ResultPoint[] { new ResultPoint(startRange[1], (float) rowNumber),
-                            new ResultPoint(endRange[0], (float) rowNumber)},
-        BarcodeFormat.ITF);
+      resultString,
+      null, // no natural byte representation for these barcodes
+      [
+        new ResultPoint(startRange[1], rowNumber),
+        new ResultPoint(endRange[0], rowNumber)
+      ],
+      BarcodeFormat.ITF);
   }
 
   /**
@@ -137,39 +135,36 @@ public final class ITFReader extends OneDReader {
    * @param resultString {@link StringBuilder} to append decoded chars to
    * @throws NotFoundException if decoding could not complete successfully
    */
-  private static void decodeMiddle(BitArray row,
-                                   int payloadStart,
-                                   int payloadEnd,
-                                   StringBuilder resultString) throws NotFoundException {
+  static decodeMiddle(row, payloadStart, payloadEnd, resultString) {
 
     // Digits are interleaved in pairs - 5 black lines for one digit, and the
     // 5
     // interleaved white lines for the second digit.
     // Therefore, need to scan 10 lines and then
     // split these into two arrays
-    int[] counterDigitPair = new int[10];
-    int[] counterBlack = new int[5];
-    int[] counterWhite = new int[5];
+    const counterDigitPair = new Int32Array(10);
+    const counterBlack = new Int32Array(5);
+    const counterWhite = new Int32Array(5);
 
     while (payloadStart < payloadEnd) {
 
       // Get 10 runs of black/white.
-      recordPattern(row, payloadStart, counterDigitPair);
+      ITFReader.recordPattern(row, payloadStart, counterDigitPair);
       // Split them into each array
-      for (int k = 0; k < 5; k++) {
-        int twoK = 2 * k;
+      for (let k = 0; k < 5; k++) {
+        const twoK = 2 * k;
         counterBlack[k] = counterDigitPair[twoK];
         counterWhite[k] = counterDigitPair[twoK + 1];
       }
 
-      int bestMatch = decodeDigit(counterBlack);
-      resultString.append((char) ('0' + bestMatch));
-      bestMatch = decodeDigit(counterWhite);
-      resultString.append((char) ('0' + bestMatch));
+      let bestMatch = ITFReader.decodeDigit(counterBlack);
+      resultString.push(String.fromCharCode(48 + bestMatch));
+      bestMatch = ITFReader.decodeDigit(counterWhite);
+      resultString.push(String.fromCharCode(48 + bestMatch));
 
-      for (int counterDigit : counterDigitPair) {
+      counterDigitPair.forEach((counterDigit) => {
         payloadStart += counterDigit;
-      }
+      });
     }
   }
 
@@ -181,16 +176,16 @@ public final class ITFReader extends OneDReader {
    *         'start block'
    * @throws NotFoundException
    */
-  int[] decodeStart(BitArray row) throws NotFoundException {
-    int endStart = skipWhiteSpace(row);
-    int[] startPattern = findGuardPattern(row, endStart, START_PATTERN);
+  decodeStart(row) {
+    const endStart = ITFReader.skipWhiteSpace(row);
+    const startPattern = ITFReader.findGuardPattern(row, endStart, START_PATTERN);
 
     // Determine the width of a narrow line in pixels. We can do this by
     // getting the width of the start pattern and dividing by 4 because its
     // made up of 4 narrow lines.
-    this.narrowLineWidth = (startPattern[1] - startPattern[0]) / 4;
+    this.narrowLineWidth = Math.floor((startPattern[1] - startPattern[0]) / 4);
 
-    validateQuietZone(row, startPattern[0]);
+    this.validateQuietZone(row, startPattern[0]);
 
     return startPattern;
   }
@@ -210,20 +205,20 @@ public final class ITFReader extends OneDReader {
    * @param startPattern index into row of the start or end pattern.
    * @throws NotFoundException if the quiet zone cannot be found, a ReaderException is thrown.
    */
-  private void validateQuietZone(BitArray row, int startPattern) throws NotFoundException {
+  validateQuietZone(row, startPattern) {
 
-    int quietCount = this.narrowLineWidth * 10;  // expect to find this many pixels of quiet zone
+    let quietCount = this.narrowLineWidth * 10; // expect to find this many pixels of quiet zone
 
     // if there are not so many pixel at all let's try as many as possible
     quietCount = quietCount < startPattern ? quietCount : startPattern;
 
-    for (int i = startPattern - 1; quietCount > 0 && i >= 0; i--) {
+    for (let i = startPattern - 1; quietCount > 0 && i >= 0; i--) {
       if (row.get(i)) {
         break;
       }
       quietCount--;
     }
-    if (quietCount != 0) {
+    if (quietCount !== 0) {
       // Unable to find the necessary number of quiet zone pixels.
       throw NotFoundException.getNotFoundInstance();
     }
@@ -236,10 +231,10 @@ public final class ITFReader extends OneDReader {
    * @return index of the first black line.
    * @throws NotFoundException Throws exception if no black lines are found in the row
    */
-  private static int skipWhiteSpace(BitArray row) throws NotFoundException {
-    int width = row.getSize();
-    int endStart = row.getNextSet(0);
-    if (endStart == width) {
+  static skipWhiteSpace(row) {
+    const width = row.getSize();
+    const endStart = row.getNextSet(0);
+    if (endStart === width) {
       throw NotFoundException.getNotFoundInstance();
     }
 
@@ -254,29 +249,30 @@ public final class ITFReader extends OneDReader {
    *         block'
    * @throws NotFoundException
    */
-  int[] decodeEnd(BitArray row) throws NotFoundException {
+  decodeEnd(row) {
 
     // For convenience, reverse the row and then
     // search from 'the start' for the end block
     row.reverse();
     try {
-      int endStart = skipWhiteSpace(row);
-      int[] endPattern = findGuardPattern(row, endStart, END_PATTERN_REVERSED);
+      const endStart = ITFReader.skipWhiteSpace(row);
+      const endPattern = ITFReader.findGuardPattern(row, endStart, END_PATTERN_REVERSED);
 
       // The start & end patterns must be pre/post fixed by a quiet zone. This
       // zone must be at least 10 times the width of a narrow line.
       // ref: http://www.barcode-1.net/i25code.html
-      validateQuietZone(row, endPattern[0]);
+      this.validateQuietZone(row, endPattern[0]);
 
       // Now recalculate the indices of where the 'endblock' starts & stops to
       // accommodate
       // the reversed nature of the search
-      int temp = endPattern[0];
+      const temp = endPattern[0];
       endPattern[0] = row.getSize() - endPattern[1];
       endPattern[1] = row.getSize() - temp;
 
       return endPattern;
-    } finally {
+    }
+    finally {
       // Put the row back the right way.
       row.reverse();
     }
@@ -291,30 +287,32 @@ public final class ITFReader extends OneDReader {
    *         ints
    * @throws NotFoundException if pattern is not found
    */
-  private static int[] findGuardPattern(BitArray row,
-                                        int rowOffset,
-                                        int[] pattern) throws NotFoundException {
-    int patternLength = pattern.length;
-    int[] counters = new int[patternLength];
-    int width = row.getSize();
-    boolean isWhite = false;
+  static findGuardPattern(row, rowOffset, pattern) {
+    const patternLength = pattern.length;
+    const counters = new Int32Array(patternLength);
+    const width = row.getSize();
+    let isWhite = false;
 
-    int counterPosition = 0;
-    int patternStart = rowOffset;
-    for (int x = rowOffset; x < width; x++) {
+    let counterPosition = 0;
+    let patternStart = rowOffset;
+    for (let x = rowOffset; x < width; x++) {
       if (row.get(x) ^ isWhite) {
         counters[counterPosition]++;
-      } else {
-        if (counterPosition == patternLength - 1) {
-          if (patternMatchVariance(counters, pattern, MAX_INDIVIDUAL_VARIANCE) < MAX_AVG_VARIANCE) {
-            return new int[]{patternStart, x};
+      }
+      else {
+        if (counterPosition === patternLength - 1) {
+          if (ITFReader.patternMatchVariance(counters, pattern, MAX_INDIVIDUAL_VARIANCE) < MAX_AVG_VARIANCE) {
+            return [patternStart, x];
           }
           patternStart += counters[0] + counters[1];
-          System.arraycopy(counters, 2, counters, 0, patternLength - 2);
+          for (let i = 0; i < patternLength - 2; i++) {
+            counters[i] = counters[i + 2];
+          }
           counters[patternLength - 2] = 0;
           counters[patternLength - 1] = 0;
           counterPosition--;
-        } else {
+        }
+        else {
           counterPosition++;
         }
         counters[counterPosition] = 1;
@@ -332,13 +330,13 @@ public final class ITFReader extends OneDReader {
    * @return The decoded digit
    * @throws NotFoundException if digit cannot be decoded
    */
-  private static int decodeDigit(int[] counters) throws NotFoundException {
-    float bestVariance = MAX_AVG_VARIANCE; // worst variance we'll accept
-    int bestMatch = -1;
-    int max = PATTERNS.length;
-    for (int i = 0; i < max; i++) {
-      int[] pattern = PATTERNS[i];
-      float variance = patternMatchVariance(counters, pattern, MAX_INDIVIDUAL_VARIANCE);
+  static decodeDigit(counters) {
+    let bestVariance = MAX_AVG_VARIANCE; // worst variance we'll accept
+    let bestMatch = -1;
+    const max = PATTERNS.length;
+    for (let i = 0; i < max; i++) {
+      const pattern = PATTERNS[i];
+      const variance = ITFReader.patternMatchVariance(counters, pattern, MAX_INDIVIDUAL_VARIANCE);
       if (variance < bestVariance) {
         bestVariance = variance;
         bestMatch = i;
@@ -346,7 +344,8 @@ public final class ITFReader extends OneDReader {
     }
     if (bestMatch >= 0) {
       return bestMatch;
-    } else {
+    }
+    else {
       throw NotFoundException.getNotFoundInstance();
     }
   }

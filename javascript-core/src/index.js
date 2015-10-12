@@ -1,15 +1,14 @@
 import Uint8RGBLuminanceSource from './Uint8RGBLuminanceSource';
 import GlobalHistogramBinarizer from './common/GlobalHistogramBinarizer';
 import BinaryBitmap from './BinaryBitmap';
-//import Code128Reader from './oned/Code128Reader';
-//import Code128Writer from './oned/Code128Writer';
-//import QRCodeReader from './qrcode/QRCodeReader';
-//import QRCodeWriter from './qrcode/QRCodeWriter';
-import UPCAReader from './oned/EAN13Reader';
-import UPCAWriter from './oned/EAN13Writer';
 import BarcodeFormat from './BarcodeFormat';
+
+import Reader from './oned/ITFReader';
+import Writer from './oned/ITFWriter';
+const FORMAT = BarcodeFormat.ITF;
+
 import EncodeHintType from './EncodeHintType';
-//import DecodeHintType from './DecodeHintType';
+import DecodeHintType from './DecodeHintType';
 
 let container;
 
@@ -35,11 +34,12 @@ function processImage(imgSrc) {
       const luminanceSource = new Uint8RGBLuminanceSource(width, height, pixels);
       const binarizer = new GlobalHistogramBinarizer(luminanceSource);
       const binaryBitmap = new BinaryBitmap(binarizer);
-      const reader = new UPCAReader();
+      const reader = new Reader();
 
       try {
         const hints = {};
         //hints[DecodeHintType.PURE_BARCODE] = true;
+        hints[DecodeHintType.TRY_HARDER] = true;
         const result = reader.decode(binaryBitmap, hints);
         const t1 = performance.now();
 
@@ -52,7 +52,7 @@ function processImage(imgSrc) {
 
       } catch (e) {
         /*eslint-disable no-console */
-        console.error(e);
+        console.error(e, e.stack);
         /*eslint-enable no-console */
         reject(e);
       }
@@ -79,7 +79,7 @@ function processLocalImage(e) {
           })
     .catch(function (e) {
             /*eslint-disable no-console */
-            console.error(e);
+            console.error(e, e.stack);
             /*eslint-enable no-console */
           });
 }
@@ -126,7 +126,7 @@ function writeMatrixToCanvas(matrix) {
           })
     .catch(function (e) {
             /*eslint-disable no-console */
-            console.error(e);
+            console.error(e, e.stack);
             /*eslint-enable no-console */
           });
 }
@@ -145,12 +145,12 @@ function doRandomTest() {
   length++;
   let sum = 0;
   for (let i = length - 2; i >= 0; i -= 2) {
-    const digit = parseInt(result[i]);
+    const digit = Number.parseInt(result[i]);
     sum += digit;
   }
   sum *= 3;
   for (let i = length - 3; i >= 0; i -= 2) {
-    const digit = parseInt(result[i]);
+    const digit = Number.parseInt(result[i]);
     sum += digit;
   }
   result.push((10 - (sum % 10)) % 10);
@@ -164,13 +164,17 @@ function processInputText(e) {
 }
 
 function processText(text) {
+  if (!text) {
+    return;
+  }
+  
   const p = document.createElement('p');
   p.innerHTML = 'Code: ' + text;
   container.insertBefore(p, container.firstChild);
 
   const hints = {};
   hints[EncodeHintType.MARGIN] = 10;
-  const bitMatrix = new UPCAWriter().encode(text, BarcodeFormat.EAN_13, 300, 100, hints);
+  const bitMatrix = new Writer().encode(text, FORMAT, 300, 100, hints);
 
   writeMatrixToCanvas(bitMatrix);
 }
